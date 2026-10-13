@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "test-server": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@mcp/server"],
+      "env": { "API_KEY": "test-key" }
+    },
+    "oauth-server": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@mcp/oauth-server"],
+      "oauthClientId": "test-client-id",
+      "auth": {
+        "redirectPort": 3000
+      }
+    },
+    "http-server": {
+      "type": "http",
+      "url": "http://localhost:8080/mcp",
+      "headers": { "Authorization": "Bearer token" }
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "name": "pi-copilot-plugins",
+  "version": "0.1.0",
+  "description": "Install GitHub Copilot plugins into Pi — extract MCP servers, skills, and agents",
+  "type": "module",
+  "bin": {
+    "pi-copilot-plugins": "./dist/cli.js"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "undici": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

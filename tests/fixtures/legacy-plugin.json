@@ -1,0 +1,10 @@
+{
+  "name": "test-legacy-plugin",
+  "version": "0.5.0",
+  "description": "Test plugin using legacy Copilot format",
+  "author": {
+    "name": "Test Author"
+  },
+  "skills": ["skills/deploy"],
+  "mcpServers": ".mcp.json"
+}

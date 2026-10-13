@@ -1,0 +1,12 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "test-agent-plugins",
+  "version": "1.0.0",
+  "description": "Test plugin using Agent Plugins 1.0 format",
+  "author": {
+    "name": "Test Author",
+    "email": "test@example.com"
+  },
+  "license": "MIT",
+  "keywords": ["test", "example"]
+}
