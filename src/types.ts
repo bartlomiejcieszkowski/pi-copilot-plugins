@@ -1,5 +1,7 @@
 // ─── Plugin Manifest Types ───────────────────────────────────────────────────
 
+import { readFileSync } from "node:fs";
+
 /** Agent Plugins 1.0 / 1.1 manifest */
 export interface AgentPluginsManifest {
   $schema: string;
@@ -148,6 +150,29 @@ export interface PluginSpec {
 export interface PluginRegistry {
   marketplaces: Record<string, RegistryMarketplace>;
   plugins: Record<string, RegistryPlugin>;
+  config?: PluginConfig;
+}
+
+/** Plugin configuration (secrets, preferences) */
+export interface PluginConfig {
+  githubToken?: string;
+}
+
+/**
+ * Get the GitHub token, checking config first, then environment variables.
+ * Config token takes precedence over env vars.
+ */
+export function getGitHubToken(): string | undefined {
+  try {
+    const registry = readFileSync(COPILOT_PLUGINS_JSON, "utf-8");
+    const parsed = JSON.parse(registry) as PluginRegistry;
+    if (parsed.config?.githubToken) {
+      return parsed.config.githubToken;
+    }
+  } catch {
+    // Config file doesn't exist or is invalid — fall through to env vars
+  }
+  return process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
 }
 
 export interface RegistryMarketplace {

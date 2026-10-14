@@ -13,6 +13,7 @@ import {
   MCP_JSON,
   SKILLS_DIR,
   AGENTS_SKILLS_DIR,
+  getGitHubToken,
 } from "./types.js";
 import {
   extractPluginComponents,
@@ -66,9 +67,9 @@ export async function peekManifest(spec: PluginSpec): Promise<PluginManifest | n
     if (spec.source.type === "github") {
       const { repo, path: subPath } = spec.source;
 
-      // Build headers — add token if available for higher rate limit
+      // Build headers — add token if available (config takes precedence over env)
       const headers: Record<string, string> = { Accept: "application/vnd.github.v3+json" };
-      const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+      const token = getGitHubToken();
       if (token) headers["Authorization"] = `token ${token}`;
 
       // Try .github/plugin.json first (Agent Plugins 1.0)
@@ -279,7 +280,7 @@ export async function peekSkills(spec: PluginSpec): Promise<string[]> {
     if (spec.source.type === "github") {
       const { repo, path: subPath } = spec.source;
       const headers: Record<string, string> = { Accept: "application/vnd.github.v3+json" };
-      const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+      const token = getGitHubToken();
       if (token) headers["Authorization"] = `token ${token}`;
 
       // Try subPath-based skills directory first, then fall back to repo root

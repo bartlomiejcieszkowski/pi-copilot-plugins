@@ -3,6 +3,7 @@ import { readRegistry, registerMarketplace } from "./registry.js";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { PI_AGENT_DIR } from "./types.js";
+import { getGitHubToken } from "./types.js";
 
 const DEFAULT_MARKETPLACE = "copilot-plugins";
 const DEFAULT_MARKETPLACE_SOURCE = "github/copilot-plugins";
@@ -84,9 +85,9 @@ export async function fetchMarketplace(source: string, force = false): Promise<{
   // Parse the source (owner/repo format)
   const [owner, repo] = source.split("/");
 
-  // Build headers — add token if available for higher rate limit
+  // Build headers — add token if available (config takes precedence over env)
   const headers: Record<string, string> = {};
-  const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+  const token = getGitHubToken();
   if (token) headers["Authorization"] = `token ${token}`;
 
   // Try the standard marketplace.json location

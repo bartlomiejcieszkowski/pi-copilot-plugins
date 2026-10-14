@@ -238,6 +238,34 @@ When installed as a Pi extension, this package provides:
 - MCP server paths are validated to stay within the plugin cache/data directories
 - All file writes use atomic writes (write to temp, rename) to prevent corruption
 
+## Configuration
+
+### GitHub Token
+
+GitHub API rate limits are 60 requests/hour for unauthenticated requests. To increase the limit to 5,000 requests/hour, you can provide a GitHub personal access token in one of two ways:
+
+**Option 1: Environment variable**
+
+```bash
+export GITHUB_TOKEN=ghp_your_token_here
+```
+
+**Option 2: Config file (takes precedence)**
+
+Add a `config` section to your plugin registry file (`~/.pi/agent/copilot-plugins.json`):
+
+```json
+{
+  "marketplaces": { ... },
+  "plugins": { ... },
+  "config": {
+    "githubToken": "ghp_your_token_here"
+  }
+}
+```
+
+The config file token takes precedence over environment variables. This is useful for sharing configuration across sessions or environments without relying on shell environment setup.
+
 ## Architecture
 
 ```
