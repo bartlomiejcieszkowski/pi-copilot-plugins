@@ -166,7 +166,8 @@ EXAMPLES:
           console.error("Error: search requires a query");
           process.exit(2);
         }
-        await cmdSearch(args[1]);
+        const json = args.includes("--json");
+        await cmdSearch(args[1], json);
         break;
       }
 
@@ -189,7 +190,8 @@ EXAMPLES:
           }
 
           case "list": {
-            cmdMarketplaceList();
+            const json = args.includes("--json");
+            cmdMarketplaceList(json);
             break;
           }
 

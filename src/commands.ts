@@ -91,9 +91,13 @@ export function parseSpec(spec: string): PluginSpec {
 }
 
 function extractNameFromUrl(url: string): string {
-  const urlObj = new URL(url);
-  const pathParts = urlObj.pathname.split("/").filter(Boolean);
-  return pathParts[pathParts.length - 1]?.replace(/\.git$/, "") || "unknown";
+  try {
+    const urlObj = new URL(url);
+    const pathParts = urlObj.pathname.split("/").filter(Boolean);
+    return pathParts[pathParts.length - 1]?.replace(/\.git$/, "") || "unknown";
+  } catch {
+    return "unknown";
+  }
 }
 
 // ─── Install Command ────────────────────────────────────────────────────────
@@ -306,8 +310,13 @@ function parseMarketplaceSource(spec: string): { name: string; source: string; a
   };
 }
 
-export function cmdMarketplaceList(): void {
+export function cmdMarketplaceList(json = false): void {
   const marketplaces = listMarketplaces();
+
+  if (json) {
+    console.log(JSON.stringify(marketplaces, null, 2));
+    return;
+  }
 
   if (marketplaces.length === 0) {
     console.log("No marketplaces registered.");
@@ -394,7 +403,7 @@ export function cmdMarketplaceRemove(name: string, force = false): void {
 
 // ─── Search Command ─────────────────────────────────────────────────────────
 
-export async function cmdSearch(query: string): Promise<void> {
+export async function cmdSearch(query: string, json = false): Promise<void> {
   const plugins: { name: string; description?: string; source?: string }[] = [];
 
   // Search in all registered marketplaces
@@ -412,6 +421,11 @@ export async function cmdSearch(query: string): Promise<void> {
     } catch {
       // Skip marketplace fetch errors
     }
+  }
+
+  if (json) {
+    console.log(JSON.stringify(plugins, null, 2));
+    return;
   }
 
   if (plugins.length === 0) {
