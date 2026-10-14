@@ -29,6 +29,7 @@ import {
 import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
 import { status, statusDone, statusWarn, statusError, statusSimple, stopSpinner } from "./progress.js";
+import { createBackup, createBackups } from "./backup.js";
 import { tmpdir } from "node:os";
 import {
   readFileSync,
@@ -176,7 +177,8 @@ export async function installPluginPackage(
   verbose = false,
   dryRun = false,
   yes = false,
-  outputDir?: string
+  outputDir?: string,
+  backup = false
 ): Promise<InstallResult> {
   const result: InstallResult = {
     success: false,
@@ -418,7 +420,7 @@ async function copyAgent(
 /**
  * Uninstall a plugin: remove from registry, mcp.json, skills, agents, and cache.
  */
-export function uninstallPluginPackage(name: string, local = false, verbose = false, dryRun = false, yes = false, outputDir?: string): UninstallResult {
+export function uninstallPluginPackage(name: string, local = false, verbose = false, dryRun = false, yes = false, outputDir?: string, backup = false): UninstallResult {
   const result: UninstallResult = {
     success: false,
     pluginName: name,

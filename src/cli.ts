@@ -108,6 +108,7 @@ OPTIONS:
   --dry-run           Preview install without making changes
   --yes, -y           Skip confirmation prompts (future use)
   --output-dir <dir>  Custom install directory (overrides all default paths)
+  --backup            Create backup before modifying files
 
 EXAMPLES:
   pi-copilot-plugins install workiq@copilot-plugins
@@ -122,7 +123,8 @@ EXAMPLES:
         const yes = args.includes("--yes") || args.includes("-y");
         const outputDir = args.find((a) => a.startsWith("--output-dir="))?.split("=")[1] ||
                           args.find((a) => a === "--output-dir") ? args[args.indexOf("--output-dir") + 1] : undefined;
-        await cmdInstall(args[1], local, verbose, dryRun, yes, outputDir);
+        const backup = args.includes("--backup");
+        await cmdInstall(args[1], local, verbose, dryRun, yes, outputDir, backup);
         break;
       }
 
@@ -142,6 +144,7 @@ OPTIONS:
   --dry-run           Preview uninstall without making changes
   --yes, -y           Skip confirmation prompts (future use)
   --output-dir <dir>  Custom install directory (overrides all default paths)
+  --backup            Create backup before modifying files
 
 EXAMPLES:
   pi-copilot-plugins uninstall workiq
@@ -155,7 +158,8 @@ EXAMPLES:
         const yes = args.includes("--yes") || args.includes("-y");
         const outputDir = args.find((a) => a.startsWith("--output-dir="))?.split("=")[1] ||
                           args.find((a) => a === "--output-dir") ? args[args.indexOf("--output-dir") + 1] : undefined;
-        const result = cmdUninstall(args[1], local, verbose, dryRun, yes, outputDir);
+        const backup = args.includes("--backup");
+        const result = cmdUninstall(args[1], local, verbose, dryRun, yes, outputDir, backup);
         process.exit(result.success ? 0 : 1);
       }
 
