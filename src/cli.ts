@@ -107,6 +107,7 @@ OPTIONS:
   --verbose, -V       Show verbose output (download URLs, files copied, etc.)
   --dry-run           Preview install without making changes
   --yes, -y           Skip confirmation prompts (future use)
+  --output-dir <dir>  Custom install directory (overrides all default paths)
 
 EXAMPLES:
   pi-copilot-plugins install workiq@copilot-plugins
@@ -119,7 +120,9 @@ EXAMPLES:
         const verbose = args.includes("--verbose") || args.includes("-V");
         const dryRun = args.includes("--dry-run");
         const yes = args.includes("--yes") || args.includes("-y");
-        await cmdInstall(args[1], local, verbose, dryRun, yes);
+        const outputDir = args.find((a) => a.startsWith("--output-dir="))?.split("=")[1] ||
+                          args.find((a) => a === "--output-dir") ? args[args.indexOf("--output-dir") + 1] : undefined;
+        await cmdInstall(args[1], local, verbose, dryRun, yes, outputDir);
         break;
       }
 
@@ -138,6 +141,7 @@ OPTIONS:
   --verbose, -V       Show verbose output (files removed, servers removed, etc.)
   --dry-run           Preview uninstall without making changes
   --yes, -y           Skip confirmation prompts (future use)
+  --output-dir <dir>  Custom install directory (overrides all default paths)
 
 EXAMPLES:
   pi-copilot-plugins uninstall workiq
@@ -149,7 +153,9 @@ EXAMPLES:
         const verbose = args.includes("--verbose") || args.includes("-V");
         const dryRun = args.includes("--dry-run");
         const yes = args.includes("--yes") || args.includes("-y");
-        const result = cmdUninstall(args[1], local, verbose, dryRun, yes);
+        const outputDir = args.find((a) => a.startsWith("--output-dir="))?.split("=")[1] ||
+                          args.find((a) => a === "--output-dir") ? args[args.indexOf("--output-dir") + 1] : undefined;
+        const result = cmdUninstall(args[1], local, verbose, dryRun, yes, outputDir);
         process.exit(result.success ? 0 : 1);
       }
 

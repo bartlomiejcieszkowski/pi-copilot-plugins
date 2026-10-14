@@ -246,21 +246,40 @@ export const PROJECT_SKILLS_DIR = `${PROJECT_AGENTS_DIR}/skills`;
 export const PROJECT_AGENTS_DIR_PATH = `${PROJECT_AGENTS_DIR}/agents`;
 
 /** Resolve paths based on scope (user vs project). */
-export function resolvePaths(scope: "user" | "project" = "user"): {
+export function resolvePaths(scope: "user" | "project" = "user", outputDir?: string): {
   mcpJson: string;
   skillsDir: string;
   agentsDir: string;
+  registry: string;
+  cacheDir: string;
+  dataDir: string;
 } {
+  if (outputDir) {
+    return {
+      mcpJson: `${outputDir}/mcp.json`,
+      skillsDir: `${outputDir}/skills`,
+      agentsDir: `${outputDir}/agents`,
+      registry: `${outputDir}/copilot-plugins.json`,
+      cacheDir: `${outputDir}/cache`,
+      dataDir: `${outputDir}/data`,
+    };
+  }
   if (scope === "project") {
     return {
       mcpJson: PI_MCP_JSON,
       skillsDir: PROJECT_SKILLS_DIR,
       agentsDir: PROJECT_AGENTS_DIR_PATH,
+      registry: COPILOT_PLUGINS_JSON,
+      cacheDir: PLUGIN_CACHE_DIR,
+      dataDir: PLUGIN_DATA_DIR,
     };
   }
   return {
     mcpJson: MCP_JSON,
     skillsDir: SKILLS_DIR,
     agentsDir: AGENTS_SKILLS_DIR,
+    registry: COPILOT_PLUGINS_JSON,
+    cacheDir: PLUGIN_CACHE_DIR,
+    dataDir: PLUGIN_DATA_DIR,
   };
 }

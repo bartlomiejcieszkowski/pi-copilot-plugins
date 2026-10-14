@@ -103,7 +103,7 @@ function extractNameFromUrl(url: string): string {
 
 // ─── Install Command ────────────────────────────────────────────────────────
 
-export async function cmdInstall(spec: string, local = false, verbose = false, dryRun = false, yes = false): Promise<InstallResult> {
+export async function cmdInstall(spec: string, local = false, verbose = false, dryRun = false, yes = false, outputDir?: string): Promise<InstallResult> {
   const pluginSpec = parseSpec(spec);
   const scope: "user" | "project" = local ? "project" : "user";
 
@@ -137,7 +137,7 @@ export async function cmdInstall(spec: string, local = false, verbose = false, d
   if (verbose) {
     console.log(`  Source: ${JSON.stringify(pluginSpec.source)}`);
   }
-  const result = await installPluginPackage(pluginSpec, local, verbose, dryRun, yes);
+  const result = await installPluginPackage(pluginSpec, local, verbose, dryRun, yes, outputDir);
 
   if (result.success) {
     console.log(green(`✓ Plugin "${pluginSpec.name}" installed successfully`));
@@ -164,7 +164,7 @@ export async function cmdInstall(spec: string, local = false, verbose = false, d
 
 // ─── Uninstall Command ──────────────────────────────────────────────────────
 
-export function cmdUninstall(name: string, local = false, verbose = false, dryRun = false, yes = false): UninstallResult {
+export function cmdUninstall(name: string, local = false, verbose = false, dryRun = false, yes = false, outputDir?: string): UninstallResult {
   if (dryRun) {
     console.log(bold("DRY RUN — no changes will be made"));
   }
@@ -179,7 +179,7 @@ export function cmdUninstall(name: string, local = false, verbose = false, dryRu
       console.log(`  Registry: ${JSON.stringify(plugin)}`);
     }
   }
-  const result = uninstallPluginPackage(name, local, verbose, dryRun, yes);
+  const result = uninstallPluginPackage(name, local, verbose, dryRun, yes, outputDir);
 
   if (result.success) {
     console.log(green(`✓ Plugin "${name}" uninstalled successfully`));
