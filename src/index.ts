@@ -98,10 +98,6 @@ function registerToolWithExposure(
   pi.registerTool({ ...def, name, exposure } as ToolDefinition);
 }
 
-const ToolsToggleParams = Type.Object({
-  enabled: Type.Boolean({ description: "Enable (true) or disable (false) all tools" }),
-});
-
 // ─── Namespace ──────────────────────────────────────────────────────────────
 
 const COPILOT_PLUGINS_NAMESPACE: ToolNamespace = {

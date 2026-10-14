@@ -1,5 +1,8 @@
 # pi-copilot-plugins
 
+[![npm version](https://img.shields.io/npm/v/pi-copilot-plugins.svg)](https://www.npmjs.com/package/pi-copilot-plugins)
+[![license](https://img.shields.io/npm/l/pi-copilot-plugins.svg)](https://github.com/bartlomiejcieszkowski/pi-copilot-plugins/blob/main/LICENSE)
+
 Install GitHub Copilot plugins into Pi — extract MCP servers, skills, and agents from Copilot's plugin format and register them in Pi's configuration.
 
 ## Features
@@ -11,26 +14,7 @@ Install GitHub Copilot plugins into Pi — extract MCP servers, skills, and agen
 - **Browse** marketplace plugins with search
 - **Pi extension** — `/copilot-plugins` slash command with tools
 
-## Quick Start
-
-```bash
-# Install the package
-npm install -g pi-copilot-plugins
-
-# Browse marketplace plugins
-pi-copilot-plugins marketplace browse copilot-plugins
-
-# Install a plugin
-pi-copilot-plugins install workiq@copilot-plugins
-
-# List installed plugins
-pi-copilot-plugins list
-
-# Search for plugins
-pi-copilot-plugins search "mcp server"
-```
-
-### Install as a Pi Extension
+## Install
 
 To use `pi-copilot-plugins` as a Pi extension (slash command + tools in chat):
 
@@ -55,6 +39,26 @@ pi install ./pi-copilot-plugins
 Once installed, restart Pi and use:
 - `/copilot-plugins` — slash command to show installed count and usage
 - Tools: `copilot_plugins_browse`, `copilot_plugins_install`, `copilot_plugins_list`, `copilot_plugins_uninstall`, `copilot_plugins_enable`, `copilot_plugins_disable`, `copilot_plugins_update`, `copilot_plugins_info`, `copilot_plugins_search`
+
+## Standalone install
+
+```bash
+# Install the package
+npm install -g pi-copilot-plugins
+
+# Browse marketplace plugins
+pi-copilot-plugins marketplace browse copilot-plugins
+
+# Install a plugin
+pi-copilot-plugins install workiq@copilot-plugins
+
+# List installed plugins
+pi-copilot-plugins list
+
+# Search for plugins
+pi-copilot-plugins search "mcp server"
+```
+
 
 ### Development
 
