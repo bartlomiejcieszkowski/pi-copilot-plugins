@@ -342,7 +342,7 @@ export function cmdMarketplaceList(json = false): void {
   console.log(bold("Registered marketplaces:"));
   for (const mp of marketplaces) {
     const autoUpdate = mp.autoUpdate ? gray(" (auto-update)") : "";
-    console.log(`  ${cyan(mp.source)}${autoUpdate}`);
+    console.log(`  ${cyan(mp.name)}${gray(` (${mp.source})`)}${autoUpdate}`);
   }
 }
 
@@ -396,30 +396,42 @@ export async function cmdMarketplaceRefresh(name?: string): Promise<void> {
   }
 }
 
-export function cmdMarketplaceRemove(name: string, force = false): void {
+export function cmdMarketplaceRemove(nameOrSource: string, force = false): void {
+  // Try to find by name first, then by source
+  let marketplaceName: string | undefined;
+  const marketplaces = listMarketplaces();
+  const byName = marketplaces.find(mp => mp.name === nameOrSource);
+  const bySource = marketplaces.find(mp => mp.source === nameOrSource);
+
+  if (byName) {
+    marketplaceName = byName.name;
+  } else if (bySource) {
+    marketplaceName = bySource.name;
+  }
+
+  if (!marketplaceName) {
+    throw new Error(`Marketplace "${nameOrSource}" not found. Use "marketplace list" to see available marketplaces.`);
+  }
+
   // Check if any plugins are installed from this marketplace
   if (!force) {
     const plugins = listPlugins();
     const installedFromMp = plugins.filter((p) => {
-      if (p.source === name) return true;
+      if (p.source === nameOrSource) return true;
       // Check if source contains the marketplace name
       return false;
     });
 
     if (installedFromMp.length > 0) {
       throw new Error(
-        `Cannot remove marketplace "${name}": ${installedFromMp.length} plugin(s) are installed from it. ` +
+        `Cannot remove marketplace "${nameOrSource}": ${installedFromMp.length} plugin(s) are installed from it. ` +
           `Use --force to also uninstall them.`
       );
     }
   }
 
-  const result = unregisterMarketplace(name);
-  if (result) {
-    console.log(`✓ Marketplace "${name}" removed.`);
-  } else {
-    console.error(`✗ Marketplace "${name}" not found.`);
-  }
+  unregisterMarketplace(marketplaceName);
+  console.log(`✓ Marketplace "${nameOrSource}" removed.`);
 }
 
 // ─── Search Command ─────────────────────────────────────────────────────────

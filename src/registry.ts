@@ -188,9 +188,9 @@ export function unregisterMarketplace(name: string): boolean {
 /**
  * List all registered marketplaces.
  */
-export function listMarketplaces(): RegistryMarketplace[] {
+export function listMarketplaces(): { name: string; source: string; autoUpdate?: boolean }[] {
   const registry = readRegistry();
-  return Object.values(registry.marketplaces);
+  return Object.entries(registry.marketplaces).map(([name, mp]) => ({ name, ...mp }));
 }
 
 /**
