@@ -115,7 +115,7 @@ describe("Registry", () => {
 
   it("registers and unregisters a marketplace", () => {
     registerMarketplace("test-mp", "owner/repo");
-    expect(getMarketplace("test-mp")).toEqual({ source: "owner/repo", autoUpdate: false });
+    expect(getMarketplace("test-mp")).toEqual({ source: "owner/repo" });
 
     const result = unregisterMarketplace("test-mp");
     expect(result).toBe(true);
@@ -124,13 +124,13 @@ describe("Registry", () => {
 
   it("lists marketplaces", () => {
     registerMarketplace("mp-a", "owner/a");
-    registerMarketplace("mp-b", "owner/b", true);
+    registerMarketplace("mp-b", "owner/b");
 
     const mps = listMarketplaces();
     const testMps = mps.filter((m) => m.source.startsWith("owner/"));
     expect(testMps).toHaveLength(2);
-    expect(testMps.find((m) => m.source === "owner/a")?.autoUpdate).toBe(false);
-    expect(testMps.find((m) => m.source === "owner/b")?.autoUpdate).toBe(true);
+    expect(testMps.find((m) => m.source === "owner/a")?.name).toBe("mp-a");
+    expect(testMps.find((m) => m.source === "owner/b")?.name).toBe("mp-b");
   });
 
   it("gets server owner", () => {

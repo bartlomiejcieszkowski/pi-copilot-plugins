@@ -177,7 +177,7 @@ export function isMarketplaceRegistered(name: string): boolean {
 export function registerDefaultMarketplace(): void {
   try {
     if (!isMarketplaceRegistered(DEFAULT_MARKETPLACE)) {
-      registerMarketplace(DEFAULT_MARKETPLACE, DEFAULT_MARKETPLACE_SOURCE, true);
+      registerMarketplace(DEFAULT_MARKETPLACE, DEFAULT_MARKETPLACE_SOURCE);
     }
   } catch {
     // Registry not available (e.g., during tests), skip

@@ -303,19 +303,17 @@ export async function cmdMarketplaceAdd(spec: string): Promise<void> {
   const source = parseMarketplaceSource(spec);
   const name = source.name;
 
-  registerMarketplace(name, source.source, source.autoUpdate);
+  registerMarketplace(name, source.source);
   console.log(`✓ Marketplace "${name}" added.`);
 }
 
-function parseMarketplaceSource(spec: string): { name: string; source: string; autoUpdate?: boolean } {
-  // GitHub repo: owner/repo or owner/repo#ref
+function parseMarketplaceSource(spec: string): { name: string; source: string } {
+  // GitHub repo: owner/repo
   if (spec.includes("/")) {
-    let [repo, ref] = spec.split("#");
-    const autoUpdate = ref === "autoUpdate"; // Special case for auto-update opt-in
+    const repo = spec.split("#")[0]; // Ignore anything after #
     return {
       name: repo.split("/")[1] || repo,
       source: repo,
-      autoUpdate,
     };
   }
 
@@ -341,8 +339,7 @@ export function cmdMarketplaceList(json = false): void {
 
   console.log(bold("Registered marketplaces:"));
   for (const mp of marketplaces) {
-    const autoUpdate = mp.autoUpdate ? gray(" (auto-update)") : "";
-    console.log(`  ${cyan(mp.name)}${gray(` (${mp.source})`)}${autoUpdate}`);
+    console.log(`  ${cyan(mp.name)}${gray(` (${mp.source})`)}`);
   }
 }
 

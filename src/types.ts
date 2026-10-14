@@ -152,7 +152,6 @@ export interface PluginRegistry {
 
 export interface RegistryMarketplace {
   source: string;
-  autoUpdate?: boolean;
 }
 
 export interface RegistryPlugin {

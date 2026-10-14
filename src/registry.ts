@@ -158,12 +158,11 @@ export function listPlugins(filter?: { enabled?: boolean }): InstalledPluginInfo
  */
 export function registerMarketplace(
   name: string,
-  source: string,
-  autoUpdate = false
+  source: string
 ): RegistryMarketplace {
   const registry = readRegistry();
 
-  registry.marketplaces[name] = { source, autoUpdate };
+  registry.marketplaces[name] = { source };
   writeRegistry(registry);
 
   return registry.marketplaces[name];
@@ -188,7 +187,7 @@ export function unregisterMarketplace(name: string): boolean {
 /**
  * List all registered marketplaces.
  */
-export function listMarketplaces(): { name: string; source: string; autoUpdate?: boolean }[] {
+export function listMarketplaces(): { name: string; source: string }[] {
   const registry = readRegistry();
   return Object.entries(registry.marketplaces).map(([name, mp]) => ({ name, ...mp }));
 }
