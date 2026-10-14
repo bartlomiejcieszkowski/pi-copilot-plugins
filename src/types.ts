@@ -157,6 +157,7 @@ export interface RegistryMarketplace {
 export interface RegistryPlugin {
   name: string;
   version?: string;
+  sha?: string;
   enabled: boolean;
   installedAt: string;
   source: PluginSource;
@@ -194,6 +195,7 @@ export interface AgentEntry {
 export interface InstalledPluginInfo {
   name: string;
   version?: string;
+  sha?: string;
   enabled: boolean;
   source: string;
   mcpServers: string[];
@@ -205,6 +207,7 @@ export interface InstallResult {
   success: boolean;
   pluginName: string;
   version?: string;
+  sha?: string;
   mcpServers: string[];
   skills: string[];
   agents: string[];

@@ -1,5 +1,5 @@
 import type { PluginSpec, PluginSource, InstallResult, UninstallResult } from "./types.js";
-import { installPluginPackage, uninstallPluginPackage, peekManifest } from "./installer.js";
+import { installPluginPackage, uninstallPluginPackage, peekManifest, peekSkills } from "./installer.js";
 import {
   listPlugins,
   registerMarketplace,
@@ -141,6 +141,14 @@ export async function cmdInstall(spec: string, local = false, verbose = false, d
 
   if (result.success) {
     console.log(green(`✓ Plugin "${pluginSpec.name}" installed successfully`));
+    if (result.version || result.sha) {
+      const versionDisplay = result.version
+        ? `${result.version}${result.sha ? ` (${result.sha.slice(0, 8)})` : ""}`
+        : result.sha
+          ? result.sha.slice(0, 8)
+          : "";
+      console.log(`  ${cyan("Version")}: ${versionDisplay || "-"}`);
+    }
     if (result.mcpServers.length > 0) {
       console.log(`  ${cyan("MCP servers")}: ${result.mcpServers.join(", ")}`);
     }
@@ -226,8 +234,13 @@ export function cmdList(json = false): void {
   console.log("-".repeat(100));
 
   for (const plugin of plugins) {
+    const versionDisplay = plugin.version
+      ? `${plugin.version}${plugin.sha ? ` (${plugin.sha.slice(0, 8)})` : ""}`
+      : plugin.sha
+        ? plugin.sha.slice(0, 8)
+        : "-";
     console.log(
-      `${padRight(plugin.name, 25)} ${padRight(plugin.version || "-", 12)} ${padRight(plugin.enabled ? "✓" : "✗", 8)} ${padRight(plugin.source, 30)} ${plugin.mcpServers.join(", ") || "-"}`
+      `${padRight(plugin.name, 25)} ${padRight(versionDisplay, 12)} ${padRight(plugin.enabled ? "✓" : "✗", 8)} ${padRight(plugin.source, 30)} ${plugin.mcpServers.join(", ") || "-"}`
     );
   }
 }
@@ -549,7 +562,7 @@ export async function cmdPeek(spec: string, json = false): Promise<void> {
 
   for (const mp of marketplaces) {
     // Skip if scoped to a specific marketplace that doesn't match
-    if (targetMarketplace && mp.source !== targetMarketplace) continue;
+    if (targetMarketplace && mp.source !== targetMarketplace && mp.name !== targetMarketplace) continue;
 
     try {
       const { plugins, stale } = await listMarketplacePlugins(mp.source);
@@ -563,10 +576,12 @@ export async function cmdPeek(spec: string, json = false): Promise<void> {
       const manifest = await peekManifest(pluginSpec);
       if (!manifest) continue;
 
+      // Peek actual skills from the skills directory
+      const skills = await peekSkills(pluginSpec);
+
       const mcpServers = "mcpServers" in manifest && manifest.mcpServers && typeof manifest.mcpServers === "object"
         ? Object.keys(manifest.mcpServers as Record<string, unknown>)
         : [];
-      const skills = "skills" in manifest ? extractSkillNames(manifest.skills) : [];
       const agents = "agents" in manifest && manifest.agents && Array.isArray(manifest.agents)
         ? extractNames(manifest.agents)
         : [];
@@ -612,13 +627,22 @@ export async function cmdPeek(spec: string, json = false): Promise<void> {
     console.log(`  source: ${result.source}`);
 
     if (result.mcpServers?.length) {
-      console.log(`  MCP servers: ${result.mcpServers.join(", ")}`);
+      console.log(`  MCP servers:`);
+      for (const s of result.mcpServers) {
+        console.log(`    - ${s}`);
+      }
     }
     if (result.skills?.length) {
-      console.log(`  Skills: ${result.skills.join(", ")}`);
+      console.log(`  Skills:`);
+      for (const s of result.skills) {
+        console.log(`    - ${s}`);
+      }
     }
     if (result.agents?.length) {
-      console.log(`  Agents: ${result.agents.join(", ")}`);
+      console.log(`  Agents:`);
+      for (const a of result.agents) {
+        console.log(`    - ${a}`);
+      }
     }
     if (result.warnings?.length) {
       for (const w of result.warnings) {

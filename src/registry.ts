@@ -58,13 +58,15 @@ export function installPlugin(
   skills?: string[],
   agents?: string[],
   scope: "user" | "project" = "user",
-  cacheDir?: string
+  cacheDir?: string,
+  sha?: string
 ): RegistryPlugin {
   const registry = readRegistry();
 
   const plugin: RegistryPlugin = {
     name,
     version,
+    sha,
     enabled: true,
     installedAt: new Date().toISOString(),
     source,
@@ -242,6 +244,7 @@ function toInstalledInfo(plugin: RegistryPlugin): InstalledPluginInfo {
   return {
     name: plugin.name,
     version: plugin.version,
+    sha: plugin.sha,
     enabled: plugin.enabled,
     source,
     mcpServers: plugin.components.mcpServers,

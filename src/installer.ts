@@ -39,6 +39,7 @@ import {
   rmSync,
   mkdtempSync,
   renameSync,
+  readdirSync,
 } from "node:fs";
 import { join, dirname } from "node:path";
 import { fetch } from "undici";
@@ -255,6 +256,45 @@ async function gitClone(
 }
 
 /**
+ * Peek at the skills directory and list actual skill names.
+ * Returns an array of directory names that contain a SKILL.md file.
+ */
+export async function peekSkills(spec: PluginSpec): Promise<string[]> {
+  try {
+    if (spec.source.type === "github") {
+      // Use GitHub API to list the skills directory
+      const { repo, path: subPath } = spec.source;
+      const apiUrl = subPath
+        ? `https://api.github.com/repos/${repo}/contents/${subPath}/skills`
+        : `https://api.github.com/repos/${repo}/contents/skills`;
+
+      const response = await fetch(apiUrl, {
+        headers: { Accept: "application/vnd.github.v3+json" },
+      });
+      if (!response.ok) return [];
+
+      const items = await response.json() as Array<{ name: string; type: string }>;
+      // Filter to directories (we'll check for SKILL.md later)
+      return items.filter(i => i.type === "dir").map(i => i.name);
+    }
+
+    if (spec.source.type === "local") {
+      // Read the skills directory directly
+      const skillsDir = join(spec.source.path, "skills");
+      if (!existsSync(skillsDir)) return [];
+      const entries = readdirSync(skillsDir);
+      return entries.filter((entry: string) => {
+        const skillMd = join(skillsDir, entry, "SKILL.md");
+        return existsSync(skillMd);
+      });
+    }
+  } catch {
+    // If we can't peek, return empty
+  }
+  return [];
+}
+
+/**
  * Read the plugin manifest from a plugin directory.
  * Tries plugin.json first, then falls back to .mcp.json and .github/mcp.json.
  * If subPath is provided, also tries at that subdirectory.
@@ -445,13 +485,15 @@ export async function installPluginPackage(
         installedSkills,
         installedAgents,
         local ? "project" : "user",
-        cacheParentDir
+        cacheParentDir,
+        sha
       );
       if (verbose) console.log(`  Registered plugin in registry`);
     }
 
     result.success = true;
     result.version = manifest.version;
+    result.sha = sha;
     result.mcpServers = installedMcp;
     result.skills = installedSkills;
     result.agents = installedAgents;
