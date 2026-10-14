@@ -10,6 +10,8 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    environment:
+      name: npmjs
     steps:
       - uses: actions/checkout@v6
 
