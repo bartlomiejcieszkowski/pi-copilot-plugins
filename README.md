@@ -18,7 +18,7 @@ Install GitHub Copilot plugins into Pi — extract MCP servers, skills, and agen
 
 To use `pi-copilot-plugins` as a Pi extension (slash command + tools in chat):
 
-**Option 1: Install from npm (once published)**
+**Option 1: Install from npm**
 
 ```bash
 pi install npm:pi-copilot-plugins
@@ -40,26 +40,6 @@ Once installed, restart Pi and use:
 - `/copilot-plugins` — slash command to show installed count and usage
 - Tools: `copilot_plugins_browse`, `copilot_plugins_install`, `copilot_plugins_list`, `copilot_plugins_uninstall`, `copilot_plugins_enable`, `copilot_plugins_disable`, `copilot_plugins_update`, `copilot_plugins_info`, `copilot_plugins_search`
 
-## Standalone install
-
-```bash
-# Install the package
-npm install -g pi-copilot-plugins
-
-# Browse marketplace plugins
-pi-copilot-plugins marketplace browse copilot-plugins
-
-# Install a plugin
-pi-copilot-plugins install workiq@copilot-plugins
-
-# List installed plugins
-pi-copilot-plugins list
-
-# Search for plugins
-pi-copilot-plugins search "mcp server"
-```
-
-
 ### Development
 
 To test the extension without installing it permanently, use `pi -e` to load it directly:
@@ -69,65 +49,6 @@ pi -e ./pi-copilot-plugins
 ```
 
 This loads the extension for the current session only — changes to the source are picked up after a Pi reload.
-
-## CLI Commands
-
-### Plugin Management
-
-| Command | Description |
-|---------|-------------|
-| `install <spec>` | Install a plugin |
-| `uninstall <name>` | Uninstall a plugin |
-| `list [--json]` | List installed plugins |
-| `update [name] [--all]` | Update a plugin or all plugins |
-| `enable <name>` | Enable a plugin |
-| `disable <name>` | Disable a plugin |
-| `search <query>` | Search for plugins in registered marketplaces |
-
-### Marketplace Management
-
-| Command | Description |
-|---------|-------------|
-| `marketplace add <spec>` | Add a marketplace |
-| `marketplace list` | List registered marketplaces |
-| `marketplace browse <name>` | Browse marketplace plugins |
-| `marketplace refresh [name]` | Refresh marketplace catalog |
-| `marketplace remove <name>` | Remove a marketplace |
-
-### Spec Formats
-
-```
-name@marketplace    # Plugin from a registered marketplace
-owner/repo          # GitHub repository root
-owner/repo:path     # Subdirectory in a repository
-https://...         # Git URL
-./path or /abs      # Local directory
-```
-
-### Examples
-
-```bash
-# From marketplace
-pi-copilot-plugins install workiq@copilot-plugins
-
-# From GitHub repo
-pi-copilot-plugins install microsoft/work-iq:plugins/workiq
-
-# From git URL
-pi-copilot-plugins install https://github.com/microsoft/work-iq.git
-
-# From local directory
-pi-copilot-plugins install ./my-plugin
-
-# From local directory (project-level)
-pi-copilot-plugins install ./my-plugin --local
-
-# Add a custom marketplace
-pi-copilot-plugins marketplace add github/copilot-plugins
-
-# Search across all marketplaces
-pi-copilot-plugins search "mcp server"
-```
 
 ## Local Plugin Directory
 
@@ -330,6 +251,85 @@ npm test
 
 # Watch mode
 npm run dev
+```
+
+## CLI Commands
+
+### Standalone install
+
+```bash
+# Install the package
+npm install -g pi-copilot-plugins
+
+# Browse marketplace plugins
+pi-copilot-plugins marketplace browse copilot-plugins
+
+# Install a plugin
+pi-copilot-plugins install workiq@copilot-plugins
+
+# List installed plugins
+pi-copilot-plugins list
+
+# Search for plugins
+pi-copilot-plugins search "mcp server"
+```
+
+
+### Plugin Management
+
+| Command | Description |
+|---------|-------------|
+| `install <spec>` | Install a plugin |
+| `uninstall <name>` | Uninstall a plugin |
+| `list [--json]` | List installed plugins |
+| `update [name] [--all]` | Update a plugin or all plugins |
+| `enable <name>` | Enable a plugin |
+| `disable <name>` | Disable a plugin |
+| `search <query>` | Search for plugins in registered marketplaces |
+
+### Marketplace Management
+
+| Command | Description |
+|---------|-------------|
+| `marketplace add <spec>` | Add a marketplace |
+| `marketplace list` | List registered marketplaces |
+| `marketplace browse <name>` | Browse marketplace plugins |
+| `marketplace refresh [name]` | Refresh marketplace catalog |
+| `marketplace remove <name>` | Remove a marketplace |
+
+### Spec Formats
+
+```
+name@marketplace    # Plugin from a registered marketplace
+owner/repo          # GitHub repository root
+owner/repo:path     # Subdirectory in a repository
+https://...         # Git URL
+./path or /abs      # Local directory
+```
+
+### Examples
+
+```bash
+# From marketplace
+pi-copilot-plugins install workiq@copilot-plugins
+
+# From GitHub repo
+pi-copilot-plugins install microsoft/work-iq:plugins/workiq
+
+# From git URL
+pi-copilot-plugins install https://github.com/microsoft/work-iq.git
+
+# From local directory
+pi-copilot-plugins install ./my-plugin
+
+# From local directory (project-level)
+pi-copilot-plugins install ./my-plugin --local
+
+# Add a custom marketplace
+pi-copilot-plugins marketplace add github/copilot-plugins
+
+# Search across all marketplaces
+pi-copilot-plugins search "mcp server"
 ```
 
 ## License
