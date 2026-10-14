@@ -629,12 +629,12 @@ async function handleSlashCommand(args: string, ctx: ExtensionCommandContext): P
               ui.notify(`Marketplace "${subArgs[0]}" not found.`, "error");
               return;
             }
-            const plugins = await listMarketplacePlugins(mp.source);
-            if (plugins.length === 0) {
+            const result = await listMarketplacePlugins(mp.source);
+            if (result.plugins.length === 0) {
               ui.notify(`No plugins in "${subArgs[0]}".`, "info");
             } else {
               let output = `Plugins in "${subArgs[0]}":\n\n`;
-              for (const p of plugins) {
+              for (const p of result.plugins) {
                 output += `- **${p.name}**${p.version ? ` v${p.version}` : ""}\n`;
                 if (p.description) output += `  ${p.description}\n\n`;
               }
