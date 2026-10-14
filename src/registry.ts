@@ -12,7 +12,7 @@ import {
   PLUGIN_CACHE_DIR,
   PLUGIN_DATA_DIR,
 } from "./types.js";
-import { readFileSync, writeFileSync, renameSync, mkdtempSync } from "fs";
+import { readFileSync, writeFileSync, renameSync, mkdtempSync, mkdirSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 
@@ -42,7 +42,12 @@ export function writeRegistry(registry: PluginRegistry): void {
   try {
     renameSync(tmpFile, COPILOT_PLUGINS_JSON);
   } catch {
-    // Fallback: direct write if rename fails
+    // Fallback: ensure dir exists, then direct write
+    try {
+      mkdirSync(join(COPILOT_PLUGINS_JSON, ".."), { recursive: true });
+    } catch {
+      // Dir might already exist
+    }
     writeFileSync(COPILOT_PLUGINS_JSON, JSON.stringify(registry, null, 2), "utf-8");
   }
 }

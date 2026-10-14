@@ -328,58 +328,30 @@ export interface UninstallResult {
 // ─── Path Constants ──────────────────────────────────────────────────────────
 
 // ─── Path Configuration ──────────────────────────────────────────────────────
+// Override all paths by setting PI_TEST_DIR environment variable.
+// Used by tests to avoid touching ~/.pi/agent/.
 
-// These can be overridden by tests via setTestPaths()
-let _testPaths: {
-  piAgentDir?: string;
-  mcpJson?: string;
-  copilotPluginsJson?: string;
-  pluginCacheDir?: string;
-  pluginDataDir?: string;
-  agentsDir?: string;
-  skillsDir?: string;
-  agentsSkillsDir?: string;
-} | null = null;
+const testDir = process.env.PI_TEST_DIR || null;
 
-/** Override all paths with test values. Call from vitest setup. */
-export function setTestPaths(paths: typeof _testPaths): void {
-  _testPaths = paths;
+function getBaseDir(): string {
+  if (testDir) return testDir;
+  return process.env.HOME || process.env.USERPROFILE || "";
 }
 
-/** Reset paths to defaults. Call from vitest teardown. */
-export function resetTestPaths(): void {
-  _testPaths = null;
-}
-
-function resolvePath(base: string, fallback: string): string {
-  if (_testPaths && base === "PI_AGENT_DIR") return _testPaths.piAgentDir ?? fallback;
-  if (_testPaths && base === "MCP_JSON") return _testPaths.mcpJson ?? fallback;
-  if (_testPaths && base === "COPILOT_PLUGINS_JSON") return _testPaths.copilotPluginsJson ?? fallback;
-  if (_testPaths && base === "PLUGIN_CACHE_DIR") return _testPaths.pluginCacheDir ?? fallback;
-  if (_testPaths && base === "PLUGIN_DATA_DIR") return _testPaths.pluginDataDir ?? fallback;
-  if (_testPaths && base === "AGENTS_DIR") return _testPaths.agentsDir ?? fallback;
-  if (_testPaths && base === "SKILLS_DIR") return _testPaths.skillsDir ?? fallback;
-  if (_testPaths && base === "AGENTS_SKILLS_DIR") return _testPaths.agentsSkillsDir ?? fallback;
-  return fallback;
-}
-
-export const HOME = process.env.HOME || process.env.USERPROFILE || "";
-
-// User-level paths
-export const PI_AGENT_DIR: string = resolvePath("PI_AGENT_DIR", `${HOME}/.pi/agent`);
-export const MCP_JSON: string = resolvePath("MCP_JSON", `${PI_AGENT_DIR}/mcp.json`);
-export const COPILOT_PLUGINS_JSON: string = resolvePath("COPILOT_PLUGINS_JSON", `${PI_AGENT_DIR}/copilot-plugins.json`);
-export const PLUGIN_CACHE_DIR: string = resolvePath("PLUGIN_CACHE_DIR", `${PI_AGENT_DIR}/copilot-plugins-cache`);
-export const PLUGIN_DATA_DIR: string = resolvePath("PLUGIN_DATA_DIR", `${PI_AGENT_DIR}/copilot-plugins-data`);
+export const PI_AGENT_DIR = `${getBaseDir()}/.pi/agent`;
+export const MCP_JSON = `${PI_AGENT_DIR}/mcp.json`;
+export const COPILOT_PLUGINS_JSON = `${PI_AGENT_DIR}/copilot-plugins.json`;
+export const PLUGIN_CACHE_DIR = `${PI_AGENT_DIR}/copilot-plugins-cache`;
+export const PLUGIN_DATA_DIR = `${PI_AGENT_DIR}/copilot-plugins-data`;
 
 // Project-level paths (relative to CWD)
 export const PI_MCP_JSON = `${process.cwd()}/.pi/mcp.json`;
 export const PI_PROJECT_DIR = `${process.cwd()}/.pi`;
 
 // Pi skill/agent discovery directories — user-level
-export const AGENTS_DIR: string = resolvePath("AGENTS_DIR", process.env.AGENTS_DIR || `${HOME}/.agents`);
-export const SKILLS_DIR: string = resolvePath("SKILLS_DIR", `${AGENTS_DIR}/skills`);
-export const AGENTS_SKILLS_DIR: string = resolvePath("AGENTS_SKILLS_DIR", `${AGENTS_DIR}/agents`);
+export const AGENTS_DIR = process.env.AGENTS_DIR || `${getBaseDir()}/.agents`;
+export const SKILLS_DIR = `${AGENTS_DIR}/skills`;
+export const AGENTS_SKILLS_DIR = `${AGENTS_DIR}/agents`;
 
 // Pi skill/agent discovery directories — project-level
 export const PROJECT_AGENTS_DIR = `${process.cwd()}/.agents`;
