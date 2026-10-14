@@ -106,6 +106,7 @@ OPTIONS:
   --local, -l         Install at project level (.pi/mcp.json, .agents/)
   --verbose, -V       Show verbose output (download URLs, files copied, etc.)
   --dry-run           Preview install without making changes
+  --yes, -y           Skip confirmation prompts (future use)
 
 EXAMPLES:
   pi-copilot-plugins install workiq@copilot-plugins
@@ -117,7 +118,8 @@ EXAMPLES:
         const local = args.includes("--local") || args.includes("-l");
         const verbose = args.includes("--verbose") || args.includes("-V");
         const dryRun = args.includes("--dry-run");
-        await cmdInstall(args[1], local, verbose, dryRun);
+        const yes = args.includes("--yes") || args.includes("-y");
+        await cmdInstall(args[1], local, verbose, dryRun, yes);
         break;
       }
 
@@ -135,6 +137,7 @@ OPTIONS:
   --local, -l         Uninstall project-level plugin
   --verbose, -V       Show verbose output (files removed, servers removed, etc.)
   --dry-run           Preview uninstall without making changes
+  --yes, -y           Skip confirmation prompts (future use)
 
 EXAMPLES:
   pi-copilot-plugins uninstall workiq
@@ -145,7 +148,8 @@ EXAMPLES:
         const local = args.includes("--local") || args.includes("-l");
         const verbose = args.includes("--verbose") || args.includes("-V");
         const dryRun = args.includes("--dry-run");
-        const result = cmdUninstall(args[1], local, verbose, dryRun);
+        const yes = args.includes("--yes") || args.includes("-y");
+        const result = cmdUninstall(args[1], local, verbose, dryRun, yes);
         process.exit(result.success ? 0 : 1);
       }
 

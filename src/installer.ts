@@ -174,7 +174,8 @@ export async function installPluginPackage(
   spec: PluginSpec,
   local = false,
   verbose = false,
-  dryRun = false
+  dryRun = false,
+  yes = false
 ): Promise<InstallResult> {
   const result: InstallResult = {
     success: false,
@@ -416,7 +417,7 @@ async function copyAgent(
 /**
  * Uninstall a plugin: remove from registry, mcp.json, skills, agents, and cache.
  */
-export function uninstallPluginPackage(name: string, local = false, verbose = false, dryRun = false): UninstallResult {
+export function uninstallPluginPackage(name: string, local = false, verbose = false, dryRun = false, yes = false): UninstallResult {
   const result: UninstallResult = {
     success: false,
     pluginName: name,
