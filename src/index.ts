@@ -109,7 +109,7 @@ export default function (pi: ExtensionAPI): void {
 
   // ─── Browse Tool ─────────────────────────────────────────────────────────
 
-  pi.registerTool("copilot_plugins_browse", {
+  pi.registerTool({
     name: "copilot_plugins_browse",
     label: "Browse Plugins",
     description: "Browse plugins in a Copilot plugin marketplace. Lists available plugins with their names, versions, and descriptions.",
@@ -130,7 +130,7 @@ export default function (pi: ExtensionAPI): void {
 
   // ─── Install Tool ────────────────────────────────────────────────────────
 
-  pi.registerTool("copilot_plugins_install", {
+  pi.registerTool({
     name: "copilot_plugins_install",
     label: "Install Plugin",
     description: "Install a GitHub Copilot plugin into Pi. Extracts MCP servers, skills, and agents from the plugin and registers them with Pi.",
@@ -151,7 +151,7 @@ export default function (pi: ExtensionAPI): void {
 
   // ─── List Tool ───────────────────────────────────────────────────────────
 
-  pi.registerTool("copilot_plugins_list", {
+  pi.registerTool({
     name: "copilot_plugins_list",
     label: "List Plugins",
     description: "List installed Copilot plugins with their status, MCP servers, and skills.",
@@ -171,7 +171,7 @@ export default function (pi: ExtensionAPI): void {
 
   // ─── Uninstall Tool ──────────────────────────────────────────────────────
 
-  pi.registerTool("copilot_plugins_uninstall", {
+  pi.registerTool({
     name: "copilot_plugins_uninstall",
     label: "Uninstall Plugin",
     description: "Uninstall a Copilot plugin from Pi. Removes MCP servers, skills, and agents installed by the plugin.",
@@ -192,7 +192,7 @@ export default function (pi: ExtensionAPI): void {
 
   // ─── Enable Tool ─────────────────────────────────────────────────────────
 
-  pi.registerTool("copilot_plugins_enable", {
+  pi.registerTool({
     name: "copilot_plugins_enable",
     label: "Enable Plugin",
     description: "Enable a disabled Copilot plugin. Re-enables its MCP servers and skills.",
@@ -212,7 +212,7 @@ export default function (pi: ExtensionAPI): void {
 
   // ─── Disable Tool ────────────────────────────────────────────────────────
 
-  pi.registerTool("copilot_plugins_disable", {
+  pi.registerTool({
     name: "copilot_plugins_disable",
     label: "Disable Plugin",
     description: "Disable a Copilot plugin. Disables its MCP servers and skills without uninstalling.",
@@ -233,7 +233,7 @@ export default function (pi: ExtensionAPI): void {
 
   // ─── Update Tool ─────────────────────────────────────────────────────────
 
-  pi.registerTool("copilot_plugins_update", {
+  pi.registerTool({
     name: "copilot_plugins_update",
     label: "Update Plugin",
     description: "Update a Copilot plugin to the latest version. Fetches the latest manifest and updates MCP servers, skills, and agents.",
@@ -254,7 +254,7 @@ export default function (pi: ExtensionAPI): void {
 
   // ─── Info Tool ───────────────────────────────────────────────────────────
 
-  pi.registerTool("copilot_plugins_info", {
+  pi.registerTool({
     name: "copilot_plugins_info",
     label: "Plugin Info",
     description: "Show detailed information about an installed plugin including source, version, SHA, installed files, and components.",
@@ -274,7 +274,7 @@ export default function (pi: ExtensionAPI): void {
 
   // ─── Search Tool ─────────────────────────────────────────────────────────
 
-  pi.registerTool("copilot_plugins_search", {
+  pi.registerTool({
     name: "copilot_plugins_search",
     label: "Search Plugins",
     description: "Search for Copilot plugins across all registered marketplaces. Returns matching plugins with names, descriptions, and source marketplaces.",
