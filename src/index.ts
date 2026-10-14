@@ -4,9 +4,9 @@ import type { Static } from "typebox";
 import { Type } from "typebox";
 
 import type { PluginSpec } from "./types.js";
-import { registerDefaultMarketplace, listMarketplacePlugins, findPluginInMarketplace, searchMarketplacePlugins, marketplacePluginToSpec } from "./marketplace.js";
-import { installPluginPackage, uninstallPluginPackage, updatePluginPackage } from "./installer.js";
-import { listPlugins, enablePlugin, disablePlugin, getMarketplace, getPlugin, uninstallPlugin } from "./registry.js";
+import { registerDefaultMarketplace, listMarketplacePlugins, findPluginInMarketplace, searchMarketplacePlugins, marketplacePluginToSpec, fetchMarketplace } from "./marketplace.js";
+import { installPluginPackage, uninstallPluginPackage, updatePluginPackage, peekManifest, peekSkills } from "./installer.js";
+import { listPlugins, enablePlugin, disablePlugin, getMarketplace, getPlugin, uninstallPlugin, registerMarketplace, unregisterMarketplace, listMarketplaces } from "./registry.js";
 
 // ─── TypeBox Schemas ────────────────────────────────────────────────────────
 
@@ -48,6 +48,29 @@ const InfoParams = Type.Object({
 const SearchParams = Type.Object({
   query: Type.String({ description: "Search query" }),
   marketplace: Type.Optional(Type.String({ description: "Marketplace name (optional, searches all if omitted)" })),
+});
+
+const PeekParams = Type.Object({
+  spec: Type.String({
+    description: "Plugin spec: name@marketplace, owner/repo, owner/repo:path, git URL, or local path",
+  }),
+});
+
+const MarketplaceAddParams = Type.Object({
+  source: Type.String({
+    description: "Marketplace source: owner/repo (e.g., 'github/awesome-copilot')",
+  }),
+  name: Type.Optional(Type.String({ description: "Display name (defaults to source)" })),
+});
+
+const MarketplaceListParams = Type.Object({});
+
+const MarketplaceRefreshParams = Type.Object({
+  marketplace: Type.Optional(Type.String({ description: "Marketplace name or source (refreshes all if omitted)" })),
+});
+
+const MarketplaceRemoveParams = Type.Object({
+  name: Type.String({ description: "Marketplace name or source to remove" }),
 });
 
 // ─── Namespace ──────────────────────────────────────────────────────────────
@@ -290,6 +313,111 @@ export default function (pi: ExtensionAPI): void {
     annotations: BROWSE_ANNOTATIONS,
     execute: async (toolCallId, params, signal, onUpdate, ctx) => {
       return handleSearch(params.query, params.marketplace);
+    },
+  });
+
+  // ─── Peek Tool ─────────────────────────────────────────────────────────────
+
+  pi.registerTool({
+    name: "copilot_plugins_peek",
+    label: "Peek Copilot Plugin",
+    description: "Preview a GitHub Copilot plugin's manifest, MCP servers, skills, and agents without downloading. Useful to check what a plugin provides before installing.",
+    promptSnippet: "Preview a Copilot plugin's contents before installing",
+    promptGuidelines: [
+      "Use this to inspect a Copilot plugin before deciding to install it",
+      "Spec format: name@marketplace, owner/repo, owner/repo:path, git URL, or local path",
+      "Shows MCP servers, skills, and agents the plugin provides",
+      "If no installable components found, the plugin may only contain Copilot-specific extensions",
+    ],
+    parameters: PeekParams,
+    exposure: "direct",
+    namespace: COPILOT_PLUGINS_NAMESPACE,
+    annotations: BROWSE_ANNOTATIONS,
+    execute: async (toolCallId, params, signal, onUpdate, ctx) => {
+      return handlePeek(params.spec);
+    },
+  });
+
+  // ─── Marketplace Add Tool ──────────────────────────────────────────────────
+
+  pi.registerTool({
+    name: "copilot_plugins_marketplace_add",
+    label: "Add Copilot Marketplace",
+    description: "Register a GitHub Copilot plugin marketplace so plugins from it can be browsed, searched, and installed.",
+    promptSnippet: "Add a Copilot plugin marketplace",
+    promptGuidelines: [
+      "Use this to register a new marketplace before browsing or installing from it",
+      "Source format: owner/repo (e.g., 'github/awesome-copilot')",
+      "The marketplace's marketplace.json will be fetched and cached",
+    ],
+    parameters: MarketplaceAddParams,
+    exposure: "direct",
+    namespace: COPILOT_PLUGINS_NAMESPACE,
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    execute: async (toolCallId, params, signal, onUpdate, ctx) => {
+      return handleMarketplaceAdd(params.source, params.name);
+    },
+  });
+
+  // ─── Marketplace List Tool ─────────────────────────────────────────────────
+
+  pi.registerTool({
+    name: "copilot_plugins_marketplace_list",
+    label: "List Copilot Marketplaces",
+    description: "List all registered GitHub Copilot plugin marketplaces with their names and sources.",
+    promptSnippet: "List registered Copilot plugin marketplaces",
+    promptGuidelines: [
+      "Use this to see which marketplaces are available",
+      "Marketplaces must be registered before plugins from them can be installed",
+    ],
+    parameters: MarketplaceListParams,
+    exposure: "direct",
+    namespace: COPILOT_PLUGINS_NAMESPACE,
+    annotations: BROWSE_ANNOTATIONS,
+    execute: async (toolCallId, params, signal, onUpdate, ctx) => {
+      return handleMarketplaceList();
+    },
+  });
+
+  // ─── Marketplace Refresh Tool ──────────────────────────────────────────────
+
+  pi.registerTool({
+    name: "copilot_plugins_marketplace_refresh",
+    label: "Refresh Copilot Marketplace",
+    description: "Force-refresh a GitHub Copilot plugin marketplace's cache. Fetches the latest marketplace.json from the source repository.",
+    promptSnippet: "Refresh a Copilot plugin marketplace cache",
+    promptGuidelines: [
+      "Use this to update marketplace data when plugins have been added or updated",
+      "Caches are automatically refreshed every 24 hours",
+      "Omit marketplace to refresh all registered marketplaces",
+    ],
+    parameters: MarketplaceRefreshParams,
+    exposure: "direct",
+    namespace: COPILOT_PLUGINS_NAMESPACE,
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+    execute: async (toolCallId, params, signal, onUpdate, ctx) => {
+      return handleMarketplaceRefresh(params.marketplace);
+    },
+  });
+
+  // ─── Marketplace Remove Tool ───────────────────────────────────────────────
+
+  pi.registerTool({
+    name: "copilot_plugins_marketplace_remove",
+    label: "Remove Copilot Marketplace",
+    description: "Remove a registered GitHub Copilot plugin marketplace. Plugins from this marketplace will no longer be searchable or installable.",
+    promptSnippet: "Remove a Copilot plugin marketplace",
+    promptGuidelines: [
+      "Use this to remove a marketplace that is no longer needed",
+      "Plugins installed from this marketplace remain installed",
+      "Cannot remove a marketplace if plugins are still installed from it",
+    ],
+    parameters: MarketplaceRemoveParams,
+    exposure: "direct",
+    namespace: COPILOT_PLUGINS_NAMESPACE,
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
+    execute: async (toolCallId, params, signal, onUpdate, ctx) => {
+      return handleMarketplaceRemove(params.name);
     },
   });
 }
@@ -554,6 +682,165 @@ async function handleSearch(query: string, marketplace?: string): Promise<import
       content: [{ type: "text", text: `Error searching plugins: ${err.message}` }],
       isError: true,
     };
+  }
+}
+
+// ─── Peek Handler ────────────────────────────────────────────────────────────
+
+async function handlePeek(spec: string): Promise<import("@earendil-works/pi-coding-agent").AgentToolResult> {
+  try {
+    registerDefaultMarketplace();
+
+    const marketplaces = listMarketplaces();
+    if (marketplaces.length === 0) {
+      return { content: [{ type: "text", text: "No marketplaces registered. Add one with: pi-copilot-plugins marketplace add <source>" }] };
+    }
+
+    // Check if spec is scoped to a marketplace: name@marketplace-source
+    let targetMarketplace: string | null = null;
+    let pluginName: string;
+
+    if (spec.includes("@")) {
+      const [name, marketplaceSource] = spec.split("@");
+      pluginName = name;
+      targetMarketplace = marketplaceSource;
+    } else {
+      pluginName = spec;
+    }
+
+    for (const mp of marketplaces) {
+      if (targetMarketplace && mp.source !== targetMarketplace && mp.name !== targetMarketplace) continue;
+
+      try {
+        const { plugins } = await listMarketplacePlugins(mp.source);
+        const match = plugins.find(p => p.name.toLowerCase() === pluginName.toLowerCase());
+        if (!match) continue;
+
+        const pluginSpec = marketplacePluginToSpec(match, mp.source);
+        const manifest = await peekManifest(pluginSpec);
+        if (!manifest) continue;
+
+        const skills = await peekSkills(pluginSpec);
+
+        const mcpServers = "mcpServers" in manifest && manifest.mcpServers && typeof manifest.mcpServers === "object"
+          ? Object.keys(manifest.mcpServers as Record<string, unknown>)
+          : [];
+        const agents = "agents" in manifest && manifest.agents && Array.isArray(manifest.agents)
+          ? manifest.agents.map((a: any) => typeof a === "string" ? a : a.name || "unknown")
+          : [];
+
+        let output = `**${match.name}**${match.version ? ` v${match.version}` : ""}\n`;
+        output += `from ${mp.source}\n`;
+        if (match.description) output += `${match.description}\n`;
+        output += `source: ${typeof match.source === "string" ? match.source : JSON.stringify(match.source)}\n`;
+
+        if (mcpServers.length) {
+          output += `\nMCP servers:\n`;
+          for (const s of mcpServers) output += `  - ${s}\n`;
+        }
+        if (skills.length) {
+          output += `\nSkills (${skills.length}):\n`;
+          for (const s of skills) output += `  - ${s}\n`;
+        }
+        if (agents.length) {
+          output += `\nAgents:\n`;
+          for (const a of agents) output += `  - ${a}\n`;
+        }
+
+        if (!mcpServers.length && !skills.length && !agents.length) {
+          output += `\n⚠️ No installable components (MCP servers, skills, or agents). Plugin may contain only Copilot-specific extensions.`;
+        }
+
+        return { content: [{ type: "text", text: output }], details: { mcpServers, skills, agents } };
+      } catch {
+        // Skip marketplace fetch errors
+      }
+    }
+
+    return { content: [{ type: "text", text: `No plugin found matching "${pluginName}".` }] };
+  } catch (err: any) {
+    return { content: [{ type: "text", text: `✗ Error peeking plugin: ${err.message}` }], isError: true };
+  }
+}
+
+// ─── Marketplace Add Handler ─────────────────────────────────────────────────
+
+function handleMarketplaceAdd(source: string, name?: string): import("@earendil-works/pi-coding-agent").AgentToolResult {
+  try {
+    const displayName = name || source;
+    registerMarketplace(displayName, source);
+    return { content: [{ type: "text", text: `✓ Marketplace "${displayName}" (${source}) registered.` }] };
+  } catch (err: any) {
+    return { content: [{ type: "text", text: `✗ Failed to register marketplace: ${err.message}` }], isError: true };
+  }
+}
+
+// ─── Marketplace List Handler ────────────────────────────────────────────────
+
+function handleMarketplaceList(): import("@earendil-works/pi-coding-agent").AgentToolResult {
+  const marketplaces = listMarketplaces();
+
+  if (marketplaces.length === 0) {
+    return { content: [{ type: "text", text: "No marketplaces registered." }] };
+  }
+
+  let output = "Registered Copilot plugin marketplaces:\n\n";
+  for (const mp of marketplaces) {
+    output += `- **${mp.name}** (${mp.source})\n\n`;
+  }
+  return { content: [{ type: "text", text: output }] };
+}
+
+// ─── Marketplace Refresh Handler ─────────────────────────────────────────────
+
+async function handleMarketplaceRefresh(marketplace?: string): Promise<import("@earendil-works/pi-coding-agent").AgentToolResult> {
+  try {
+    if (marketplace) {
+      const mp = getMarketplace(marketplace);
+      if (!mp) {
+        return { content: [{ type: "text", text: `Marketplace "${marketplace}" not found.` }], isError: true };
+      }
+      await fetchMarketplace(mp.source, true);
+      return { content: [{ type: "text", text: `✓ Marketplace "${mp.name}" (${mp.source}) refreshed.` }] };
+    }
+
+    // Refresh all
+    const marketplaces = listMarketplaces();
+    const refreshed: string[] = [];
+    for (const mp of marketplaces) {
+      try {
+        await fetchMarketplace(mp.source, true);
+        refreshed.push(mp.name);
+      } catch {
+        // Skip errors
+      }
+    }
+    return { content: [{ type: "text", text: `✓ Refreshed ${refreshed.length} marketplace(s): ${refreshed.join(", ") || "none"}.` }] };
+  } catch (err: any) {
+    return { content: [{ type: "text", text: `✗ Error refreshing marketplace: ${err.message}` }], isError: true };
+  }
+}
+
+// ─── Marketplace Remove Handler ──────────────────────────────────────────────
+
+function handleMarketplaceRemove(name: string): import("@earendil-works/pi-coding-agent").AgentToolResult {
+  try {
+    // Check if any installed plugins use this marketplace
+    const installed = listPlugins();
+    const mp = getMarketplace(name);
+    if (!mp) {
+      return { content: [{ type: "text", text: `Marketplace "${name}" not found.` }], isError: true };
+    }
+
+    const hasInstalledPlugins = installed.some(p => p.source === mp.source);
+    if (hasInstalledPlugins) {
+      return { content: [{ type: "text", text: `✗ Cannot remove marketplace "${mp.name}" — plugins are still installed from it.` }], isError: true };
+    }
+
+    unregisterMarketplace(name);
+    return { content: [{ type: "text", text: `✓ Marketplace "${mp.name}" removed.` }] };
+  } catch (err: any) {
+    return { content: [{ type: "text", text: `✗ Failed to remove marketplace: ${err.message}` }], isError: true };
   }
 }
 
