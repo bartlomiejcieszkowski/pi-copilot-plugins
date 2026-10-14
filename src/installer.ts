@@ -28,6 +28,7 @@ import {
 } from "./registry.js";
 import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
+import { status, statusDone, statusWarn, statusError, statusSimple, stopSpinner } from "./progress.js";
 import { tmpdir } from "node:os";
 import {
   readFileSync,
@@ -60,16 +61,20 @@ export async function downloadPlugin(
     case "github": {
       const { repo, path: subPath } = spec.source;
       const cloneUrl = `https://github.com/${repo}.git`;
+      statusSimple(`Downloading from github/${repo}${subPath ? ` (${subPath})` : ""}...`);
       const result = await gitClone(cloneUrl, spec.source.path);
       cacheDir = result.cacheDir;
       sha = result.sha;
+      statusDone(`Downloaded github/${repo}`);
       break;
     }
 
     case "git": {
+      statusSimple(`Downloading from ${spec.source.url}...`);
       const result = await gitClone(spec.source.url);
       cacheDir = result.cacheDir;
       sha = result.sha;
+      statusDone(`Downloaded`);
       break;
     }
 
@@ -110,10 +115,13 @@ async function gitClone(
 
   // Clone the repository
   try {
+    const stop = status("Cloning repository...");
     execSync(`git clone --depth 1 ${url} "${cacheDir}"`, {
       stdio: "pipe",
     });
+    stop();
   } catch (err: any) {
+    stopSpinner();
     throw new Error(`Failed to clone ${url}: ${err.stderr?.toString() || err.message}`);
   }
 
@@ -219,11 +227,9 @@ export async function installPluginPackage(
 
     // Step 5: Copy skills
     const installedSkills: string[] = [];
-    for (const skill of components.skills) {
-      if (dryRun) {
-        installedSkills.push(skill.name);
-        if (verbose) console.log(`  Would copy skill: ${skill.name} (${skill.skillMdPath})`);
-      } else {
+    if (components.skills.length > 0 && !dryRun) {
+      const stop = status(`Copying ${components.skills.length} skill(s)...`);
+      for (const skill of components.skills) {
         try {
           await copySkill(skill, cacheDir, local);
           installedSkills.push(skill.name);
@@ -237,15 +243,17 @@ export async function installPluginPackage(
           }
         }
       }
+      stop();
+      statusDone(`Copied ${installedSkills.length} skill(s)`);
+    } else if (components.skills.length > 0) {
+      statusDone(`Would copy ${components.skills.length} skill(s)`);
     }
 
     // Step 6: Copy agents
     const installedAgents: string[] = [];
-    for (const agent of components.agents) {
-      if (dryRun) {
-        installedAgents.push(agent.name);
-        if (verbose) console.log(`  Would copy agent: ${agent.name} (${agent.agentMdPath})`);
-      } else {
+    if (components.agents.length > 0 && !dryRun) {
+      const stop = status(`Copying ${components.agents.length} agent(s)...`);
+      for (const agent of components.agents) {
         try {
           await copyAgent(agent, cacheDir, local);
           installedAgents.push(agent.name);
@@ -259,6 +267,10 @@ export async function installPluginPackage(
           }
         }
       }
+      stop();
+      statusDone(`Copied ${installedAgents.length} agent(s)`);
+    } else if (components.agents.length > 0) {
+      statusDone(`Would copy ${components.agents.length} agent(s)`);
     }
 
     // Step 7: Create plugin data directory
