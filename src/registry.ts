@@ -57,7 +57,8 @@ export function installPlugin(
   mcpServers?: string[],
   skills?: string[],
   agents?: string[],
-  scope: "user" | "project" = "user"
+  scope: "user" | "project" = "user",
+  cacheDir?: string
 ): RegistryPlugin {
   const registry = readRegistry();
 
@@ -68,6 +69,7 @@ export function installPlugin(
     installedAt: new Date().toISOString(),
     source,
     scope,
+    cacheDir,
     components: {
       mcpServers: mcpServers || [],
       skills: skills || [],

@@ -161,6 +161,7 @@ export interface RegistryPlugin {
   installedAt: string;
   source: PluginSource;
   scope: "user" | "project";
+  cacheDir?: string;
   components: {
     mcpServers: string[];
     skills: string[];

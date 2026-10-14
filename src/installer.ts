@@ -78,7 +78,11 @@ export async function peekManifest(spec: PluginSpec): Promise<PluginManifest | n
       }
 
       // Try legacy format: .mcp.json or .github/mcp.json
+      // Also try at subPath for plugins with a subdirectory source
       const legacyPaths = [".mcp.json", ".github/mcp.json"];
+      if (subPath) {
+        legacyPaths.push(subPath + "/.mcp.json");
+      }
       for (const legacyPath of legacyPaths) {
         const legacyUrl = `https://api.github.com/repos/${repo}/contents/${legacyPath}`;
         response = await fetch(legacyUrl, {
@@ -130,8 +134,9 @@ function createLegacyManifestFromContent(
   return {
     $schema: "https://copilot-plugins.dev/schemas/legacy/v0.json",
     name: repo.split("/").pop() || "unknown",
-    mcpServers: Array.isArray(config) ? config : [],
-    skills: subPath ? [subPath] : [],
+    mcpServers: "mcpServers" in config ? (config.mcpServers as Record<string, unknown>) : {},
+    // Legacy plugins with .mcp.json typically have skills/ at repo root
+    skills: ["skills"],
   };
 }
 
@@ -143,7 +148,7 @@ function createLegacyManifestFromContent(
  */
 export async function downloadPlugin(
   spec: PluginSpec
-): Promise<{ cacheDir: string; manifest: PluginManifest; sha?: string }> {
+): Promise<{ cacheDir: string; manifest: PluginManifest; sha?: string; subPath?: string }> {
   let cacheDir: string;
   let sha: string | undefined;
 
@@ -186,9 +191,9 @@ export async function downloadPlugin(
   }
 
   // Read and parse the manifest
-  const manifest = readManifest(cacheDir);
+  const manifest = readManifest(cacheDir, spec.source.type === "github" ? spec.source.path : undefined);
 
-  return { cacheDir, manifest, sha };
+  return { cacheDir, manifest, sha, subPath: spec.source.type === "github" ? spec.source.path : undefined };
 }
 
 /**
@@ -201,15 +206,19 @@ async function gitClone(
   // Create cache directory
   mkdirSync(PLUGIN_CACHE_DIR, { recursive: true });
 
-  // Generate a unique cache directory name from the URL
-  const hash = createHash("md5")
+  // Generate a unique cache directory name from the URL (8 chars)
+  const hash = createHash("sha1")
     .update(url)
-    .digest("hex");
+    .digest("hex")
+    .slice(0, 8);
   const cacheDir = join(PLUGIN_CACHE_DIR, hash);
 
   // Clone the repository
   try {
     const stop = status("Cloning repository...");
+    if (existsSync(cacheDir)) {
+      rmSync(cacheDir, { recursive: true, force: true });
+    }
     execSync(`git clone --depth 1 ${url} "${cacheDir}"`, {
       stdio: "pipe",
     });
@@ -245,18 +254,56 @@ async function gitClone(
 
 /**
  * Read the plugin manifest from a plugin directory.
+ * Tries plugin.json first, then falls back to .mcp.json and .github/mcp.json.
+ * If subPath is provided, also tries at that subdirectory.
  */
-export function readManifest(pluginRoot: string): PluginManifest {
-  const manifestPath = `${pluginRoot}/plugin.json`;
+export function readManifest(pluginRoot: string, subPath?: string): PluginManifest {
+  // Try paths in priority order
+  const candidates: string[] = [];
 
-  try {
-    const content = readFileSync(manifestPath, "utf-8");
-    return JSON.parse(content) as PluginManifest;
-  } catch (err: any) {
-    throw new Error(
-      `Failed to read plugin.json from ${pluginRoot}: ${err.message}`
-    );
+  if (subPath) {
+    // Agent Plugins 1.0: <subPath>/plugin.json
+    candidates.push(`${pluginRoot}/${subPath}/plugin.json`);
   }
+
+  // Legacy: .mcp.json or .github/mcp.json at root
+  candidates.push(`${pluginRoot}/.mcp.json`);
+  candidates.push(`${pluginRoot}/.github/mcp.json`);
+
+  // Also try at subPath for legacy
+  if (subPath) {
+    candidates.push(`${pluginRoot}/${subPath}/.mcp.json`);
+  }
+
+  // Root-level plugin.json as last resort
+  candidates.push(`${pluginRoot}/plugin.json`);
+
+  for (const manifestPath of candidates) {
+    try {
+      const content = readFileSync(manifestPath, "utf-8");
+      const parsed = JSON.parse(content);
+
+      // If it's a valid manifest with $schema, return it
+      if ("$schema" in parsed) {
+        return parsed as PluginManifest;
+      }
+
+      // If it has mcpServers, treat as legacy MCP config
+      if ("mcpServers" in parsed) {
+        return createLegacyManifestFromContent(
+          subPath?.split("/").pop() || "unknown",
+          subPath,
+          parsed
+        );
+      }
+    } catch {
+      // Try next candidate
+    }
+  }
+
+  throw new Error(
+    `Failed to read plugin.json from ${pluginRoot}: no manifest found in any expected location`
+  );
 }
 
 // ─── Plugin Installation ────────────────────────────────────────────────────
@@ -283,14 +330,14 @@ export async function installPluginPackage(
 
   try {
     // Step 1: Download the plugin
-    const { cacheDir, manifest, sha } = await downloadPlugin(spec);
+    const { cacheDir, manifest, sha, subPath } = await downloadPlugin(spec);
     if (verbose) {
       console.log(`  Cache directory: ${cacheDir}`);
       if (sha) console.log(`  Commit SHA: ${sha}`);
       if (manifest.version) console.log(`  Version: ${manifest.version}`);
     }
 
-    // Step 2: Extract components
+    // Step 2: Extract components (use repo root, not subPath)
     const components = extractPluginComponents(manifest, cacheDir);
     if (verbose) {
       console.log(`  Extracted MCP servers: ${components.mcpServers.length}`);
@@ -385,7 +432,8 @@ export async function installPluginPackage(
         installedMcp,
         installedSkills,
         installedAgents,
-        local ? "project" : "user"
+        local ? "project" : "user",
+        cacheDir
       );
       if (verbose) console.log(`  Registered plugin in registry`);
     }
@@ -629,11 +677,10 @@ export function uninstallPluginPackage(name: string, local = false, verbose = fa
 
     if (!dryRun) {
       // Remove cache directory (user-level only)
-      if (scope === "user") {
-        const cacheDir = PLUGIN_CACHE_DIR;
-        if (verbose) console.log(`  Removing cache directory: ${cacheDir}`);
+      if (scope === "user" && plugin.cacheDir) {
+        if (verbose) console.log(`  Removing cache directory: ${plugin.cacheDir}`);
         try {
-          rmSync(cacheDir, { recursive: true, force: true });
+          rmSync(plugin.cacheDir, { recursive: true, force: true });
         } catch {
           // Ignore errors on cache removal
         }

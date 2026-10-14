@@ -431,6 +431,35 @@ export function cmdMarketplaceRemove(nameOrSource: string, force = false): void 
   console.log(`✓ Marketplace "${nameOrSource}" removed.`);
 }
 
+// ─── Helper Functions ────────────────────────────────────────────────────────
+
+/**
+ * Extract names from an array that may be strings or objects with name property.
+ */
+function extractNames(arr: unknown[]): string[] {
+  return arr.map(item => {
+    if (typeof item === "string") return item;
+    if (item && typeof item === "object" && "name" in item) return (item as { name: string }).name;
+    return "unknown";
+  });
+}
+
+/**
+ * Extract skill names from manifest skills field.
+ * Skills can be strings (paths) or objects with name/path.
+ */
+function extractSkillNames(skills: unknown): string[] {
+  if (!Array.isArray(skills)) return [];
+  return skills.map(item => {
+    if (typeof item === "string") return item;
+    if (item && typeof item === "object") {
+      if ("name" in item) return (item as { name: string }).name;
+      if ("path" in item) return (item as { path: string }).path;
+    }
+    return "unknown";
+  });
+}
+
 // ─── Search Command ─────────────────────────────────────────────────────────
 
 export async function cmdSearch(query: string, json = false): Promise<void> {
@@ -534,15 +563,23 @@ export async function cmdPeek(spec: string, json = false): Promise<void> {
       const manifest = await peekManifest(pluginSpec);
       if (!manifest) continue;
 
+      const mcpServers = "mcpServers" in manifest && manifest.mcpServers && typeof manifest.mcpServers === "object"
+        ? Object.keys(manifest.mcpServers as Record<string, unknown>)
+        : [];
+      const skills = "skills" in manifest ? extractSkillNames(manifest.skills) : [];
+      const agents = "agents" in manifest && manifest.agents && Array.isArray(manifest.agents)
+        ? extractNames(manifest.agents)
+        : [];
+
       const result: PeekResult = {
         marketplace: mp.source,
         name: match.name,
         version: match.version,
         description: match.description,
         source: typeof match.source === "string" ? match.source : JSON.stringify(match.source),
-        mcpServers: "mcpServers" in manifest ? (manifest.mcpServers as { name?: string }[]).map(s => s.name || "unknown") : [],
-        skills: "skills" in manifest ? (manifest.skills as { name?: string }[]).map(s => s.name || "unknown") : [],
-        agents: "agents" in manifest ? (manifest.agents as { name?: string }[]).map(a => a.name || "unknown") : [],
+        mcpServers,
+        skills,
+        agents,
       };
 
       // Check for warnings
