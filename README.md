@@ -30,6 +30,32 @@ pi-copilot-plugins list
 pi-copilot-plugins search "mcp server"
 ```
 
+### Install as a Pi Extension
+
+To use `pi-copilot-plugins` as a Pi extension (slash command + tools in chat):
+
+**Option 1: Install from npm (once published)**
+
+```bash
+pi install npm:pi-copilot-plugins
+```
+
+**Option 2: Install from GitHub**
+
+```bash
+pi install git:github.com/bartlomiejcieszkowski/pi-copilot-plugins
+```
+
+**Option 3: Install from local path (development)**
+
+```bash
+pi install ./pi-copilot-plugins
+```
+
+Once installed, restart Pi and use:
+- `/copilot-plugins` — slash command to show installed count and usage
+- Tools: `copilot_plugins_browse`, `copilot_plugins_install`, `copilot_plugins_list`, `copilot_plugins_uninstall`, `copilot_plugins_enable`, `copilot_plugins_disable`, `copilot_plugins_update`, `copilot_plugins_info`, `copilot_plugins_search`
+
 ## CLI Commands
 
 ### Plugin Management
@@ -79,11 +105,96 @@ pi-copilot-plugins install https://github.com/microsoft/work-iq.git
 # From local directory
 pi-copilot-plugins install ./my-plugin
 
+# From local directory (project-level)
+pi-copilot-plugins install ./my-plugin --local
+
 # Add a custom marketplace
 pi-copilot-plugins marketplace add github/copilot-plugins
 
 # Search across all marketplaces
 pi-copilot-plugins search "mcp server"
+```
+
+## Local Plugin Directory
+
+You can install plugins from a local directory on your filesystem. The directory must contain a valid plugin manifest:
+
+### Agent Plugins 1.0/1.1 Format
+
+```
+my-plugin/
+├── .github/
+│   └── plugin/
+│       └── plugin.json    # Manifest with $schema, mcpServers, skills, agents
+├── skills/
+│   ├── my-skill/
+│   │   └── SKILL.md
+│   └── another-skill/
+│       └── SKILL.md
+└── com.github.copilot/
+    └── agents/
+        └── my-agent.md
+```
+
+### Legacy Format
+
+```
+my-plugin/
+├── .mcp.json              # MCP server config (or .github/mcp.json)
+├── skills/
+│   ├── my-skill/
+│   │   └── SKILL.md
+│   └── another-skill/
+│       └── SKILL.md
+└── agents/
+    └── my-agent.md
+```
+
+### Manifest Example (Agent Plugins 1.0)
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/earendil-works/copilot-plugins/main/manifest-schemas/AgentPlugins-1.0.json",
+  "name": "my-plugin",
+  "version": "1.0.0",
+  "mcpServers": {
+    "my-server": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "my-mcp-server"]
+    }
+  },
+  "skills": [
+    { "name": "my-skill", "path": "skills/my-skill/SKILL.md" }
+  ],
+  "agents": [
+    { "name": "my-agent", "path": "com.github.copilot/agents/my-agent.md" }
+  ]
+}
+```
+
+### Legacy Manifest Example
+
+```json
+{
+  "mcpServers": {
+    "my-server": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "my-mcp-server"]
+    }
+  },
+  "skills": ["skills/my-skill/SKILL.md"],
+  "agents": ["agents/my-agent.md"]
+}
+```
+
+### Project-Level Install
+
+Use `--local` to install a local plugin at the project level (writes to `.pi/mcp.json` and `.agents/` in the current directory instead of user-level paths):
+
+```bash
+pi-copilot-plugins install ./my-plugin --local
 ```
 
 ## Pi Extension
