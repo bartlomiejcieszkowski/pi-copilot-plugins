@@ -212,13 +212,44 @@ pi-copilot-plugins install ./my-plugin --local
 When installed as a Pi extension, this package provides:
 
 - **Slash command**: `/copilot-plugins` — shows installed plugins and usage info
-- **Tools**:
+  - `/copilot-plugins help` — show usage reference
+  - `/copilot-plugins install <spec>` — install a plugin
+  - `/copilot-plugins uninstall <name>` — uninstall a plugin
+  - `/copilot-plugins list [--json]` — list installed plugins
+  - `/copilot-plugins update [name] [--all]` — update a plugin or all
+  - `/copilot-plugins enable <name>` — enable a plugin
+  - `/copilot-plugins disable <name>` — disable a plugin
+  - `/copilot-plugins search <query>` — search for plugins
+  - `/copilot-plugins peek <spec>` — preview a plugin before installing
+  - `/copilot-plugins tools` — show tool toggle status
+  - `/copilot-plugins tools enable` — enable all Copilot tools
+  - `/copilot-plugins tools disable` — disable all Copilot tools
+  - `/copilot-plugins marketplace add <source>` — add a marketplace
+  - `/copilot-plugins marketplace list` — list marketplaces
+  - `/copilot-plugins marketplace browse <name>` — browse marketplace
+  - `/copilot-plugins marketplace refresh [name]` — refresh marketplace
+  - `/copilot-plugins marketplace remove <name>` — remove marketplace
+
+- **Tools** (disabled by default to save context):
   - `copilot_plugins_browse` — browse marketplace plugins
   - `copilot_plugins_install` — install a plugin by spec
   - `copilot_plugins_list` — list installed plugins
   - `copilot_plugins_uninstall` — uninstall a plugin
   - `copilot_plugins_enable` — enable a plugin
   - `copilot_plugins_disable` — disable a plugin
+  - `copilot_plugins_update` — update a plugin
+  - `copilot_plugins_info` — show plugin details
+  - `copilot_plugins_search` — search for plugins
+  - `copilot_plugins_peek` — preview a plugin before installing
+  - `copilot_plugins_marketplace_add` — add a marketplace
+  - `copilot_plugins_marketplace_list` — list marketplaces
+  - `copilot_plugins_marketplace_refresh` — refresh marketplace cache
+  - `copilot_plugins_marketplace_remove` — remove a marketplace
+
+- **Tool toggle**: `copilot_plugins_tools_toggle` (always visible)
+  - `copilot_plugins_tools_toggle({ enabled: true })` — enable all 14 tools
+  - `copilot_plugins_tools_toggle({ enabled: false })` — hide all 14 tools
+  - Tools are hidden by default to save context; enable when you need to browse, install, or manage plugins
 
 ## File Locations
 
