@@ -161,7 +161,7 @@ export async function downloadPlugin(
       const { repo, path: subPath } = spec.source;
       const cloneUrl = `https://github.com/${repo}.git`;
       statusSimple(`Downloading from github/${repo}${subPath ? ` (${subPath})` : ""}...`);
-      const result = await gitClone(cloneUrl, spec.source.path);
+      const result = await gitClone(cloneUrl, spec.name, spec.source.path);
       cacheDir = result.cacheDir;
       sha = result.sha;
       statusDone(`Downloaded github/${repo}`);
@@ -170,7 +170,7 @@ export async function downloadPlugin(
 
     case "git": {
       statusSimple(`Downloading from ${spec.source.url}...`);
-      const result = await gitClone(spec.source.url);
+      const result = await gitClone(spec.source.url, spec.name);
       cacheDir = result.cacheDir;
       sha = result.sha;
       statusDone(`Downloaded`);
@@ -201,14 +201,16 @@ export async function downloadPlugin(
  */
 async function gitClone(
   url: string,
+  pluginName: string,
   subPath?: string
 ): Promise<{ cacheDir: string; sha: string }> {
   // Create cache directory
   mkdirSync(PLUGIN_CACHE_DIR, { recursive: true });
 
-  // Generate a unique cache directory name from the URL (8 chars)
+  // Generate a unique cache directory name from URL + plugin name (8 chars)
+  // Each plugin gets its own isolated cache, even from the same repo
   const hash = createHash("sha1")
-    .update(url)
+    .update(url + "|" + pluginName)
     .digest("hex")
     .slice(0, 8);
   const cacheDir = join(PLUGIN_CACHE_DIR, hash);
@@ -425,6 +427,16 @@ export async function installPluginPackage(
 
     // Step 8: Register in the plugin registry
     if (!dryRun) {
+      // Store the parent cache dir (hash dir) for cleanup on uninstall
+      // cacheDir is either <PLUGIN_CACHE_DIR>/<hash> or <PLUGIN_CACHE_DIR>/<hash>/<subPath>
+      // We want the <hash> dir
+      let cacheParentDir: string | undefined;
+      const normalized = cacheDir.replace(/\\/g, "/");
+      const prefix = PLUGIN_CACHE_DIR.replace(/\\/g, "/") + "/";
+      if (normalized.startsWith(prefix)) {
+        const rel = normalized.slice(prefix.length);
+        cacheParentDir = join(PLUGIN_CACHE_DIR, rel.split("/")[0]);
+      }
       installPlugin(
         spec.name,
         spec.source,
@@ -433,7 +445,7 @@ export async function installPluginPackage(
         installedSkills,
         installedAgents,
         local ? "project" : "user",
-        cacheDir
+        cacheParentDir
       );
       if (verbose) console.log(`  Registered plugin in registry`);
     }
