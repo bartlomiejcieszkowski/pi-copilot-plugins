@@ -56,14 +56,17 @@ export async function peekManifest(spec: PluginSpec): Promise<PluginManifest | n
     if (spec.source.type === "github") {
       const { repo, path: subPath } = spec.source;
 
+      // Build headers — add token if available for higher rate limit
+      const headers: Record<string, string> = { Accept: "application/vnd.github.v3+json" };
+      const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+      if (token) headers["Authorization"] = `token ${token}`;
+
       // Try .github/plugin.json first (Agent Plugins 1.0)
       const apiUrl = subPath
         ? `https://api.github.com/repos/${repo}/contents/${subPath}/plugin.json`
         : `https://api.github.com/repos/${repo}/contents/.github/plugin.json`;
 
-      let response = await fetch(apiUrl, {
-        headers: { Accept: "application/vnd.github.v3+json" },
-      });
+      let response = await fetch(apiUrl, { headers });
 
       if (response.ok) {
         const data = await response.json() as { content: string };
@@ -71,6 +74,10 @@ export async function peekManifest(spec: PluginSpec): Promise<PluginManifest | n
         try {
           const manifest = JSON.parse(decoded) as PluginManifest;
           if ("$schema" in manifest) {
+            return manifest;
+          }
+          // Also accept legacy manifests (no $schema) that have mcpServers or skills
+          if ("mcpServers" in manifest || "skills" in manifest || "agents" in manifest) {
             return manifest;
           }
         } catch {
@@ -86,9 +93,7 @@ export async function peekManifest(spec: PluginSpec): Promise<PluginManifest | n
       }
       for (const legacyPath of legacyPaths) {
         const legacyUrl = `https://api.github.com/repos/${repo}/contents/${legacyPath}`;
-        response = await fetch(legacyUrl, {
-          headers: { Accept: "application/vnd.github.v3+json" },
-        });
+        response = await fetch(legacyUrl, { headers });
 
         if (response.ok) {
           const data = await response.json() as { content: string };
@@ -262,20 +267,25 @@ async function gitClone(
 export async function peekSkills(spec: PluginSpec): Promise<string[]> {
   try {
     if (spec.source.type === "github") {
-      // Use GitHub API to list the skills directory
       const { repo, path: subPath } = spec.source;
-      const apiUrl = subPath
-        ? `https://api.github.com/repos/${repo}/contents/${subPath}/skills`
-        : `https://api.github.com/repos/${repo}/contents/skills`;
+      const headers: Record<string, string> = { Accept: "application/vnd.github.v3+json" };
+      const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+      if (token) headers["Authorization"] = `token ${token}`;
 
-      const response = await fetch(apiUrl, {
-        headers: { Accept: "application/vnd.github.v3+json" },
-      });
-      if (!response.ok) return [];
+      // Try subPath-based skills directory first, then fall back to repo root
+      const urls = subPath
+        ? [`https://api.github.com/repos/${repo}/contents/${subPath}/skills`, `https://api.github.com/repos/${repo}/contents/skills`]
+        : [`https://api.github.com/repos/${repo}/contents/skills`];
 
-      const items = await response.json() as Array<{ name: string; type: string }>;
-      // Filter to directories (we'll check for SKILL.md later)
-      return items.filter(i => i.type === "dir").map(i => i.name);
+      for (const apiUrl of urls) {
+        const response = await fetch(apiUrl, { headers });
+        if (response.ok) {
+          const items = await response.json() as Array<{ name: string; type: string }>;
+          // Filter to directories (we'll check for SKILL.md later)
+          return items.filter(i => i.type === "dir").map(i => i.name);
+        }
+      }
+      return [];
     }
 
     if (spec.source.type === "local") {

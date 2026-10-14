@@ -46,6 +46,10 @@ ${bold("OPTIONS:")}
   ${cyan("--version")}   Show version number
   ${cyan("--help")}      Show help
 
+${bold("ENVIRONMENT:")}
+  ${cyan("GITHUB_TOKEN")} or ${cyan("GH_TOKEN")}    GitHub personal access token for higher API rate limits
+                      (5,000/hr vs 60/hr unauthenticated)
+
 ${bold("SPEC FORMATS (for install):"  )}
   ${cyan("name@marketplace")}    Plugin from a registered marketplace
   ${cyan("owner/repo")}          GitHub repository root

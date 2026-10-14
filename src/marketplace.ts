@@ -84,16 +84,21 @@ export async function fetchMarketplace(source: string, force = false): Promise<{
   // Parse the source (owner/repo format)
   const [owner, repo] = source.split("/");
 
+  // Build headers — add token if available for higher rate limit
+  const headers: Record<string, string> = {};
+  const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+  if (token) headers["Authorization"] = `token ${token}`;
+
   // Try the standard marketplace.json location
   const url = `https://raw.githubusercontent.com/${owner}/${repo}/main/.github/plugin/marketplace.json`;
 
   let response: Response;
   try {
-    response = await fetch(url);
+    response = await fetch(url, { headers });
   } catch {
     // Try 'master' branch as fallback
     const urlMaster = `https://raw.githubusercontent.com/${owner}/${repo}/master/.github/plugin/marketplace.json`;
-    response = await fetch(urlMaster);
+    response = await fetch(urlMaster, { headers });
   }
 
   if (!response.ok) {
