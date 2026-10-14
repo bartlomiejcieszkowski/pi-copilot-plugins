@@ -18,6 +18,7 @@ import {
   isMarketplaceRegistered,
   marketplacePluginToSpec,
 } from "./marketplace.js";
+import { green, red, bold, cyan, gray } from "./colors.js";
 
 // ─── CLI Command Implementations ────────────────────────────────────────────
 
@@ -133,18 +134,18 @@ export async function cmdInstall(spec: string, local = false): Promise<InstallRe
   const result = await installPluginPackage(pluginSpec, local);
 
   if (result.success) {
-    console.log(`✓ Plugin "${pluginSpec.name}" installed successfully`);
+    console.log(green(`✓ Plugin "${pluginSpec.name}" installed successfully`));
     if (result.mcpServers.length > 0) {
-      console.log(`  MCP servers: ${result.mcpServers.join(", ")}`);
+      console.log(`  ${cyan("MCP servers")}: ${result.mcpServers.join(", ")}`);
     }
     if (result.skills.length > 0) {
-      console.log(`  Skills: ${result.skills.join(", ")}`);
+      console.log(`  ${cyan("Skills")}: ${result.skills.join(", ")}`);
     }
     if (result.agents.length > 0) {
-      console.log(`  Agents: ${result.agents.join(", ")}`);
+      console.log(`  ${cyan("Agents")}: ${result.agents.join(", ")}`);
     }
   } else {
-    console.error(`✗ Failed to install plugin "${pluginSpec.name}"`);
+    console.error(red(`✗ Failed to install plugin "${pluginSpec.name}"`));
     if (result.errors) {
       for (const error of result.errors) {
         console.error(`  ${error}`);
@@ -166,12 +167,12 @@ export function cmdUninstall(name: string, local = false): UninstallResult {
   const result = uninstallPluginPackage(name, local);
 
   if (result.success) {
-    console.log(`✓ Plugin "${name}" uninstalled successfully`);
+    console.log(green(`✓ Plugin "${name}" uninstalled successfully`));
     if (result.removedMcpServers.length > 0) {
-      console.log(`  Removed MCP servers: ${result.removedMcpServers.join(", ")}`);
+      console.log(`  ${cyan("Removed MCP servers")}: ${result.removedMcpServers.join(", ")}`);
     }
     if (result.removedSkills.length > 0) {
-      console.log(`  Removed skills: ${result.removedSkills.join(", ")}`);
+      console.log(`  ${cyan("Removed skills")}: ${result.removedSkills.join(", ")}`);
     }
     if (result.removedAgents.length > 0) {
       console.log(`  Removed agents: ${result.removedAgents.join(", ")}`);
@@ -265,18 +266,18 @@ export async function cmdUpdate(name?: string, all = false): Promise<void> {
 export function cmdEnable(name: string): void {
   const result = enablePlugin(name);
   if (result) {
-    console.log(`✓ Plugin "${name}" enabled.`);
+    console.log(green(`✓ Plugin "${name}" enabled.`));
   } else {
-    console.error(`✗ Plugin "${name}" is not installed.`);
+    console.error(red(`✗ Plugin "${name}" is not installed.`));
   }
 }
 
 export function cmdDisable(name: string): void {
   const result = disablePlugin(name);
   if (result) {
-    console.log(`✓ Plugin "${name}" disabled.`);
+    console.log(green(`✓ Plugin "${name}" disabled.`));
   } else {
-    console.error(`✗ Plugin "${name}" is not installed.`);
+    console.error(red(`✗ Plugin "${name}" is not installed.`));
   }
 }
 
@@ -323,9 +324,10 @@ export function cmdMarketplaceList(json = false): void {
     return;
   }
 
-  console.log("Registered marketplaces:");
+  console.log(bold("Registered marketplaces:"));
   for (const mp of marketplaces) {
-    console.log(`  ${mp.source}${mp.autoUpdate ? " (auto-update)" : ""}`);
+    const autoUpdate = mp.autoUpdate ? gray(" (auto-update)") : "";
+    console.log(`  ${cyan(mp.source)}${autoUpdate}`);
   }
 }
 
@@ -433,9 +435,9 @@ export async function cmdSearch(query: string, json = false): Promise<void> {
     return;
   }
 
-  console.log(`Plugins matching "${query}":`);
+  console.log(bold(`Plugins matching "${query}":`));
   for (const plugin of plugins) {
-    console.log(`  ${plugin.name}${plugin.description ? ` - ${plugin.description}` : ""}`);
+    console.log(`  ${cyan(plugin.name)}${plugin.description ? gray(` - ${plugin.description}`) : ""}`);
     if (plugin.source) {
       console.log(`    from ${plugin.source}`);
     }

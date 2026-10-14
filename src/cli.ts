@@ -1,48 +1,58 @@
 #!/usr/bin/env node
 
 import { cmdInstall, cmdUninstall, cmdList, cmdUpdate, cmdEnable, cmdDisable, cmdMarketplaceAdd, cmdMarketplaceList, cmdMarketplaceBrowse, cmdMarketplaceRefresh, cmdMarketplaceRemove, cmdSearch, parseSpec } from "./commands.js";
+import { bold, cyan, gray } from "./colors.js";
 
 const VERSION = "0.1.0";
 
 function printUsage(): void {
   console.log(`
-pi-copilot-plugins v${VERSION}
+${bold(`pi-copilot-plugins v${VERSION}`)}
 
-Install and manage GitHub Copilot plugins in Pi.
+${bold("DESCRIPTION:"  )}
+  Manage GitHub Copilot plugins in Pi.
 
-USAGE:
+${bold("USAGE:")}
   pi-copilot-plugins <command> [options]
 
-COMMANDS:
-  install <spec>        Install a plugin (alias: add)
-  uninstall <name>      Uninstall a plugin (aliases: remove, rm)
+${bold("COMMANDS:")}
+  ${cyan("install <spec>")}${bold(" (alias: add)")}
+    Install a plugin
+  ${cyan("uninstall <name>")}${bold(" (aliases: remove, rm)")}
+    Uninstall a plugin
 
-OPTIONS:
-  --local, -l           Install/uninstall at project level (.pi/mcp.json, .agents/)
-  list [--json]         List installed plugins
-  update [name] [--all] Update a plugin or all plugins
-  enable <name>         Enable a plugin
-  disable <name>        Disable a plugin
-  search <query>        Search for plugins in registered marketplaces
+${bold("OPTIONS:")}
+  ${cyan("--local, -l")}           Install/uninstall at project level (.pi/mcp.json, .agents/)
+  ${cyan("list [--json]")}         List installed plugins
+  ${cyan("update [name] [--all]")} Update a plugin or all plugins
+  ${cyan("enable <name>")}         Enable a plugin
+  ${cyan("disable <name>")}        Disable a plugin
+  ${cyan("search <query>")}        Search for plugins in registered marketplaces
 
-  marketplace add <spec>       Add a marketplace (alias: add)
-  marketplace list [--json]    List registered marketplaces
-  marketplace browse <name>    Browse marketplace plugins
-  marketplace refresh [name]   Refresh marketplace catalog (aliases: update, refresh)
-  marketplace remove <name>    Remove a marketplace
+${bold("MARKETPLACE COMMANDS:")}
+  ${cyan("marketplace add <spec>")}${bold(" (alias: add)")}
+    Add a marketplace
+  ${cyan("marketplace list [--json]")}
+    List registered marketplaces
+  ${cyan("marketplace browse <name>")}
+    Browse marketplace plugins
+  ${cyan("marketplace refresh [name]")}${bold(" (aliases: update, refresh)")}
+    Refresh marketplace catalog
+  ${cyan("marketplace remove <name>")}
+    Remove a marketplace
 
-OPTIONS:
-  --version   Show version number
-  --help      Show help
+${bold("OPTIONS:")}
+  ${cyan("--version")}   Show version number
+  ${cyan("--help")}      Show help
 
-SPEC FORMATS (for install):
-  name@marketplace    Plugin from a registered marketplace
-  owner/repo          GitHub repository root
-  owner/repo:path     Subdirectory in a repository
-  https://...         Git URL
-  ./path or /abs      Local directory
+${bold("SPEC FORMATS (for install):"  )}
+  ${cyan("name@marketplace")}    Plugin from a registered marketplace
+  ${cyan("owner/repo")}          GitHub repository root
+  ${cyan("owner/repo:path")}     Subdirectory in a repository
+  ${cyan("https://...")}         Git URL
+  ${cyan("./path or /abs")}      Local directory
 
-EXAMPLES:
+${bold("EXAMPLES:")}
   pi-copilot-plugins install workiq@copilot-plugins
   pi-copilot-plugins install microsoft/work-iq:plugins/workiq
   pi-copilot-plugins install https://github.com/microsoft/work-iq.git
