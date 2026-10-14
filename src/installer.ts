@@ -5,8 +5,9 @@ import type {
   ExtractedComponents,
   InstallResult,
   UninstallResult,
+  MarketplacePlugin,
 } from "./types.js";
-import { getMarketplace } from "./registry.js";
+import { getMarketplace, listMarketplaces } from "./registry.js";
 import { findPluginInMarketplace, marketplacePluginToSpec } from "./marketplace.js";
 import {
   PLUGIN_CACHE_DIR,
@@ -392,22 +393,26 @@ export async function installPluginPackage(
   try {
     // Resolve marketplace installs before downloading
     if (spec.source.type === "marketplace") {
-      const marketplaceName = spec.source.marketplace;
-      const marketplace = getMarketplace(marketplaceName);
-      if (!marketplace) {
+      // Search ALL registered marketplaces for the plugin name
+      const marketplaces = listMarketplaces();
+      let found: { plugin: MarketplacePlugin; source: string } | null = null;
+
+      for (const mp of marketplaces) {
+        const result = await findPluginInMarketplace(mp.source, spec.name);
+        if (result.plugin) {
+          found = { plugin: result.plugin, source: mp.source };
+          break;
+        }
+      }
+
+      if (!found) {
+        const available = marketplaces.map(m => m.name).join(", ");
         throw new Error(
-          `Marketplace "${marketplaceName}" not found. Register it with: pi-copilot-plugins marketplace add <source>`
+          `Plugin "${spec.name}" not found in any marketplace (${available}). Use "pi-copilot-plugins marketplace browse <name>" to see available plugins.`
         );
       }
 
-      const plugin = await findPluginInMarketplace(marketplace.source, spec.name);
-      if (!plugin.plugin) {
-        throw new Error(
-          `Plugin "${spec.name}" not found in marketplace "${marketplaceName}". Use "pi-copilot-plugins marketplace browse ${marketplaceName}" to see available plugins.`
-        );
-      }
-
-      const resolvedSpec = marketplacePluginToSpec(plugin.plugin, marketplaceName);
+      const resolvedSpec = marketplacePluginToSpec(found.plugin, found.source);
       spec.name = resolvedSpec.name;
       spec.source = resolvedSpec.source;
     }
