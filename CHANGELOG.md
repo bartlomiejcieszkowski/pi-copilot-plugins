@@ -5,44 +5,72 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.2.0] — 2026-10-15
 
 ### Added
-- `peek` command to preview plugin manifest before downloading
-- `peekSkills()` function to read actual skill names from directories
-- Tool toggle system — tools hidden by default, toggle via slash command or tool
-- Slash command subcommands mirroring CLI (15+ subcommands)
-- Marketplace caching with 24h TTL and staleness warnings
-- `marketplace refresh` command to force refresh cache
-- `--dry-run` flag for install/uninstall preview
-- `--output-dir` flag for custom install locations
-- `--backup` flag to create backups before changes
-- `--yes/-y` flag infrastructure for skipping prompts
-- Progress indicators with animated spinner
-- `GITHUB_TOKEN` support for higher API rate limits (5000/hr)
-- `--json` flag for list, marketplace list, and search commands
-- Color output respecting `NO_COLOR` environment variable
-- `--verbose` flag for debug output
-
-### Changed
-- Subdirectory source handling for marketplace plugins (e.g. `plugins/azure-skills`)
-- Legacy manifest fallback (.mcp.json, .github/mcp.json)
-- Cache directory naming: SHA1 truncated to 8 characters
+- `awesome-copilot` marketplace auto-registered alongside `copilot-plugins` by default
 
 ### Fixed
-- Extension-only plugins skipped from registry (no longer installed silently)
-- Local path parsing before GitHub repo check
-- Parallel test isolation in registry tests
-- Import paths for ESM compatibility
+- Slash command args parsed as string (not array) — fixes `marketplace list`, `tools enable`, etc.
+- Tools enable/disable now shown in slash command help text
 
-## [0.1.0] — 2026-01-01
+## [0.1.0] — 2026-10-14
 
 ### Added
-- Initial release
-- CLI with install, uninstall, list, update, enable, disable, search commands
-- Marketplace management (add, list, browse, refresh, remove)
-- MCP server conversion (Copilot → Pi format)
-- Skill and agent extraction
-- Plugin registry with owner tracking
-- Pi extension with 14 tools and slash command
-- Full README documentation
+- CLI commands: `install`, `uninstall`, `list`, `update`, `enable`, `disable`, `search`
+- Marketplace management: `marketplace add`, `marketplace list`, `marketplace browse`, `marketplace refresh`, `marketplace remove`
+- MCP server conversion from Copilot `.mcp.json` format to Pi `mcp.json` format
+- Skill and agent extraction from plugin packages
+- Plugin registry with owner tracking and targeted uninstall
+- Pi extension with slash command `/copilot-plugins` and 14 tools (browse, install, list, uninstall, enable, disable, update, info, search, peek, marketplace add/list/refresh/remove)
+- Tool toggle system — tools hidden by default, toggle via `copilot_plugins_tools_toggle`
+- Slash command subcommands mirroring CLI commands
+- Marketplace caching with 24h TTL and staleness warnings
+- `--json` flag for `list`, `marketplace list`, and `search` commands
+- Color output respecting `NO_COLOR` environment variable
+- `--verbose` flag for debug output
+- `--dry-run` flag to preview install/uninstall without changes
+- `--output-dir` flag for custom install locations
+- `--backup` flag to create timestamped backups before changes
+- `--yes/-y` flag infrastructure for skipping prompts
+- Progress indicators with animated spinner for downloads/clones
+- `peek` command to preview plugin manifest before downloading
+- `peekSkills()` to read actual skill names from repository directories
+- `GITHUB_TOKEN` / `GH_TOKEN` support for higher API rate limits (5000/hr)
+- Config file support for `githubToken` with precedence over env vars
+- Cache directory naming via SHA1 truncated to 8 characters
+- Plugin SHA tracking in registry for integrity verification
+- Extension-only plugins detected and skipped from registry with warning
+
+### Changed
+- Local path parsing now takes priority over GitHub repo matching
+- Marketplace list shows both name and source (e.g. `copilot-plugins (github/copilot-plugins)`)
+- Marketplace remove accepts either name or source
+
+### Fixed
+- Parallel test isolation via `PI_TEST_DIR` environment variable
+- Import paths for ESM compatibility
+- Duplicate `ToolsToggleParams` declaration in extension entry
+- Extension-only plugins no longer installed silently
+- `registerTool()` called with single `ToolDefinition` object (not two arguments)
+- Tool labels and descriptions explicitly mention "Copilot"
+- Subdirectory source handling for marketplace plugins (e.g. `plugins/azure-skills`)
+- Legacy manifest fallback through `.mcp.json` and `.github/mcp.json`
+- AutoUpdate field removed from marketplace registry (never acted on)
+- Cache directories isolated per plugin and cleaned up on uninstall
+
+### Removed
+- `autoUpdate` field from marketplace registry (never acted on)
+
+### Documentation
+- Full README with install, CLI, Pi extension, file locations, security, and configuration sections
+- CONTRIBUTING.md with setup, commit format, and PR guidelines
+- CHANGELOG.md in Keep a Changelog format
+- CI/CD workflows for build, test, and coverage
+- Release workflow with npm stage publish
+
+### Package
+- Repository metadata, bugs URL, homepage, and keywords in package.json
+- `@vitest/coverage-v8` dev dependency for CI coverage step
+- `package-lock.json` for reproducible installs
+- npm pack verified clean (39 files, 310KB)

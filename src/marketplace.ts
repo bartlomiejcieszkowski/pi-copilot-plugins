@@ -178,12 +178,15 @@ export function isMarketplaceRegistered(name: string): boolean {
 }
 
 /**
- * Register the default marketplace if not already registered.
+ * Register the default marketplaces if not already registered.
  */
 export function registerDefaultMarketplace(): void {
   try {
     if (!isMarketplaceRegistered(DEFAULT_MARKETPLACE)) {
       registerMarketplace(DEFAULT_MARKETPLACE, DEFAULT_MARKETPLACE_SOURCE);
+    }
+    if (!isMarketplaceRegistered("awesome-copilot")) {
+      registerMarketplace("awesome-copilot", "github/awesome-copilot");
     }
   } catch {
     // Registry not available (e.g., during tests), skip
