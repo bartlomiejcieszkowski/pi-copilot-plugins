@@ -390,13 +390,15 @@ export default function (pi: ExtensionAPI): void {
 
 // ─── Slash Command Handler ──────────────────────────────────────────────────
 
-async function handleSlashCommand(args: string[], ctx: ExtensionCommandContext): Promise<void> {
+async function handleSlashCommand(args: string, ctx: ExtensionCommandContext): Promise<void> {
   const { ui } = ctx;
 
   // Ensure default marketplace is registered
   registerDefaultMarketplace();
 
-  if (!args.length || args[0] === "help" || args[0] === "--help" || args[0] === "-h") {
+  const parts = args.trim().split(/\s+/).filter(Boolean);
+
+  if (!parts.length || parts[0] === "help" || parts[0] === "--help" || parts[0] === "-h") {
     // Show help / installed count
     const installed = listPlugins();
     const installedNames = installed.map((p) => p.name).join(", ") || "none";
@@ -412,6 +414,9 @@ async function handleSlashCommand(args: string[], ctx: ExtensionCommandContext):
       `  disable <name>        Disable a plugin\n` +
       `  search <query>        Search for plugins\n` +
       `  peek <spec>           Preview a plugin\n` +
+      `  tools                 Show tool toggle status\n` +
+      `  tools enable          Enable all Copilot tools\n` +
+      `  tools disable         Disable all Copilot tools\n` +
       `  marketplace add <src> Add a marketplace\n` +
       `  marketplace list      List marketplaces\n` +
       `  marketplace browse <name> Browse marketplace\n` +
@@ -422,8 +427,8 @@ async function handleSlashCommand(args: string[], ctx: ExtensionCommandContext):
     return;
   }
 
-  const command = args[0];
-  const rest = args.slice(1);
+  const command = parts[0];
+  const rest = parts.slice(1);
 
   try {
     switch (command) {
