@@ -424,19 +424,267 @@ export default function (pi: ExtensionAPI): void {
 
 // ─── Slash Command Handler ──────────────────────────────────────────────────
 
-async function handleSlashCommand(_args: string[], ctx: ExtensionCommandContext): Promise<void> {
+async function handleSlashCommand(args: string[], ctx: ExtensionCommandContext): Promise<void> {
   const { ui } = ctx;
 
   // Ensure default marketplace is registered
   registerDefaultMarketplace();
 
-  const installed = listPlugins();
-  const installedNames = installed.map((p) => p.name).join(", ") || "none";
+  if (!args.length || args[0] === "help" || args[0] === "--help" || args[0] === "-h") {
+    // Show help / installed count
+    const installed = listPlugins();
+    const installedNames = installed.map((p) => p.name).join(", ") || "none";
+    ui.notify(
+      `Copilot Plugins: ${installed.length} installed (${installedNames}).\n\n` +
+      `Usage: /copilot-plugins <command> [args]\n\n` +
+      `Commands:\n` +
+      `  install <spec>        Install a plugin\n` +
+      `  uninstall <name>      Uninstall a plugin\n` +
+      `  list [--json]         List installed plugins\n` +
+      `  update [name] [--all] Update a plugin or all\n` +
+      `  enable <name>         Enable a plugin\n` +
+      `  disable <name>        Disable a plugin\n` +
+      `  search <query>        Search for plugins\n` +
+      `  peek <spec>           Preview a plugin\n` +
+      `  marketplace add <src> Add a marketplace\n` +
+      `  marketplace list      List marketplaces\n` +
+      `  marketplace browse <name> Browse marketplace\n` +
+      `  marketplace refresh [name] Refresh marketplace\n` +
+      `  marketplace remove <name> Remove marketplace`,
+      "info"
+    );
+    return;
+  }
 
-  ui.notify(
-    `Copilot Plugins: ${installed.length} installed (${installedNames}). Use tools to browse, install, or manage plugins.`,
-    "info"
-  );
+  const command = args[0];
+  const rest = args.slice(1);
+
+  try {
+    switch (command) {
+      case "install": {
+        if (!rest.length) {
+          ui.notify("Usage: /copilot-plugins install <spec>", "error");
+          return;
+        }
+        const result = await installPluginPackage(parseSpecForExtension(rest[0]));
+        if (result.success) {
+          let output = `✓ Installed "${result.pluginName}"\n\n`;
+          if (result.mcpServers.length) output += `MCP: ${result.mcpServers.join(", ")}\n`;
+          if (result.skills.length) output += `Skills: ${result.skills.join(", ")}\n`;
+          if (result.agents.length) output += `Agents: ${result.agents.join(", ")}\n`;
+          ui.notify(output.trim(), "success");
+        } else {
+          ui.notify(`✗ Failed: ${result.errors?.join(", ") || "unknown error"}`, "error");
+        }
+        break;
+      }
+      case "uninstall": {
+        if (!rest.length) {
+          ui.notify("Usage: /copilot-plugins uninstall <name>", "error");
+          return;
+        }
+        const result = uninstallPluginPackage(rest[0]);
+        if (result.success) {
+          ui.notify(`✓ Uninstalled "${rest[0]}"`, "success");
+        } else {
+          ui.notify(`✗ Failed: ${result.errors?.join(", ") || "not found"}`, "error");
+        }
+        break;
+      }
+      case "list": {
+        const json = rest.includes("--json");
+        const plugins = listPlugins();
+        if (plugins.length === 0) {
+          ui.notify("No plugins installed.", "info");
+        } else if (json) {
+          ui.notify(JSON.stringify(plugins, null, 2), "info");
+        } else {
+          let output = "Installed plugins:\n\n";
+          for (const p of plugins) {
+            output += `- **${p.name}**${p.version ? ` v${p.version}` : ""} ${p.enabled ? "✓" : "✗"}\n`;
+            if (p.mcpServers.length) output += `  MCP: ${p.mcpServers.join(", ")}\n`;
+            if (p.skills.length) output += `  Skills: ${p.skills.join(", ")}\n`;
+            output += "\n";
+          }
+          ui.notify(output.trim(), "info");
+        }
+        break;
+      }
+      case "update": {
+        const all = rest.includes("--all");
+        const name = all ? undefined : rest.find(r => r !== "--all");
+        if (!name && !all) {
+          ui.notify("Usage: /copilot-plugins update [name] [--all]", "error");
+          return;
+        }
+        if (all) {
+          const installed = listPlugins();
+          const updated: string[] = [];
+          for (const p of installed) {
+            try {
+              const r = await updatePluginPackage(p.name);
+              if (r.success) updated.push(p.name);
+            } catch {
+              // Skip errors
+            }
+          }
+          ui.notify(`✓ Updated ${updated.length} plugin(s): ${updated.join(", ") || "none"}`, "info");
+        } else {
+          const result = await updatePluginPackage(name!);
+          if (result.success) {
+            ui.notify(`✓ Updated "${result.pluginName}"`, "success");
+          } else {
+            ui.notify(`✗ Failed: ${result.errors?.join(", ") || "unknown error"}`, "error");
+          }
+        }
+        break;
+      }
+      case "enable": {
+        if (!rest.length) {
+          ui.notify("Usage: /copilot-plugins enable <name>", "error");
+          return;
+        }
+        const r = enablePlugin(rest[0]);
+        ui.notify(r ? `✓ Enabled "${rest[0]}"` : `✗ Plugin "${rest[0]}" not found`, r ? "success" : "error");
+        break;
+      }
+      case "disable": {
+        if (!rest.length) {
+          ui.notify("Usage: /copilot-plugins disable <name>", "error");
+          return;
+        }
+        const r = disablePlugin(rest[0]);
+        ui.notify(r ? `✓ Disabled "${rest[0]}"` : `✗ Plugin "${rest[0]}" not found`, r ? "success" : "error");
+        break;
+      }
+      case "search": {
+        if (!rest.length) {
+          ui.notify("Usage: /copilot-plugins search <query>", "error");
+          return;
+        }
+        const results = await searchMarketplacePlugins("github/copilot-plugins", rest.join(" "));
+        if (results.length === 0) {
+          ui.notify(`No plugins found matching "${rest.join(" ")}".`, "info");
+        } else {
+          let output = `Plugins matching "${rest.join(" ")}":\n\n`;
+          for (const p of results) {
+            output += `- **${p.name}**${p.description ? ` — ${p.description}` : ""}\n\n`;
+          }
+          ui.notify(output.trim(), "info");
+        }
+        break;
+      }
+      case "peek": {
+        if (!rest.length) {
+          ui.notify("Usage: /copilot-plugins peek <spec>", "error");
+          return;
+        }
+        const result = await handlePeek(rest[0]);
+        ui.notify(result.content[0].type === "text" ? result.content[0].text : "", "info");
+        break;
+      }
+      case "marketplace": {
+        if (!rest.length) {
+          ui.notify("Usage: /copilot-plugins marketplace <subcommand>\nSubcommands: add, list, browse, refresh, remove", "error");
+          return;
+        }
+        const sub = rest[0];
+        const subArgs = rest.slice(1);
+        switch (sub) {
+          case "add": {
+            if (!subArgs.length) {
+              ui.notify("Usage: /copilot-plugins marketplace add <source>", "error");
+              return;
+            }
+            registerMarketplace(subArgs[0], subArgs[0]);
+            ui.notify(`✓ Marketplace "${subArgs[0]}" registered.`, "success");
+            break;
+          }
+          case "list": {
+            const mps = listMarketplaces();
+            if (mps.length === 0) {
+              ui.notify("No marketplaces registered.", "info");
+            } else {
+              let output = "Registered marketplaces:\n\n";
+              for (const m of mps) {
+                output += `- **${m.name}** (${m.source})\n\n`;
+              }
+              ui.notify(output.trim(), "info");
+            }
+            break;
+          }
+          case "browse": {
+            if (!subArgs.length) {
+              ui.notify("Usage: /copilot-plugins marketplace browse <name>", "error");
+              return;
+            }
+            const mp = getMarketplace(subArgs[0]);
+            if (!mp) {
+              ui.notify(`Marketplace "${subArgs[0]}" not found.`, "error");
+              return;
+            }
+            const plugins = await listMarketplacePlugins(mp.source);
+            if (plugins.length === 0) {
+              ui.notify(`No plugins in "${subArgs[0]}".`, "info");
+            } else {
+              let output = `Plugins in "${subArgs[0]}":\n\n`;
+              for (const p of plugins) {
+                output += `- **${p.name}**${p.version ? ` v${p.version}` : ""}\n`;
+                if (p.description) output += `  ${p.description}\n\n`;
+              }
+              ui.notify(output.trim(), "info");
+            }
+            break;
+          }
+          case "refresh": {
+            if (subArgs.length) {
+              const mp = getMarketplace(subArgs[0]);
+              if (!mp) {
+                ui.notify(`Marketplace "${subArgs[0]}" not found.`, "error");
+                return;
+              }
+              await fetchMarketplace(mp.source, true);
+              ui.notify(`✓ Marketplace "${subArgs[0]}" refreshed.`, "success");
+            } else {
+              const mps = listMarketplaces();
+              const refreshed: string[] = [];
+              for (const m of mps) {
+                try { await fetchMarketplace(m.source, true); refreshed.push(m.name); } catch { /* skip */ }
+              }
+              ui.notify(`✓ Refreshed ${refreshed.length} marketplace(s).`, "info");
+            }
+            break;
+          }
+          case "remove": {
+            if (!subArgs.length) {
+              ui.notify("Usage: /copilot-plugins marketplace remove <name>", "error");
+              return;
+            }
+            const mp = getMarketplace(subArgs[0]);
+            if (!mp) {
+              ui.notify(`Marketplace "${subArgs[0]}" not found.`, "error");
+              return;
+            }
+            const hasInstalled = listPlugins().some(p => p.source === mp.source);
+            if (hasInstalled) {
+              ui.notify(`✗ Cannot remove — plugins are still installed from it.`, "error");
+              return;
+            }
+            unregisterMarketplace(subArgs[0]);
+            ui.notify(`✓ Marketplace "${subArgs[0]}" removed.`, "success");
+            break;
+          }
+          default:
+            ui.notify(`Unknown marketplace subcommand: ${sub}\nUse: add, list, browse, refresh, remove`, "error");
+        }
+        break;
+      }
+      default:
+        ui.notify(`Unknown command: ${command}\nRun /copilot-plugins help for usage.`, "error");
+    }
+  } catch (err: any) {
+    ui.notify(`✗ Error: ${err.message}`, "error");
+  }
 }
 
 // ─── Tool Handlers ──────────────────────────────────────────────────────────
