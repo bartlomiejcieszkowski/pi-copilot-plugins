@@ -164,7 +164,8 @@ export function readManifest(pluginRoot: string): PluginManifest {
  */
 export async function installPluginPackage(
   spec: PluginSpec,
-  local = false
+  local = false,
+  verbose = false
 ): Promise<InstallResult> {
   const result: InstallResult = {
     success: false,
@@ -177,15 +178,31 @@ export async function installPluginPackage(
   try {
     // Step 1: Download the plugin
     const { cacheDir, manifest, sha } = await downloadPlugin(spec);
+    if (verbose) {
+      console.log(`  Cache directory: ${cacheDir}`);
+      if (sha) console.log(`  Commit SHA: ${sha}`);
+      if (manifest.version) console.log(`  Version: ${manifest.version}`);
+    }
 
     // Step 2: Extract components
     const components = extractPluginComponents(manifest, cacheDir);
+    if (verbose) {
+      console.log(`  Extracted MCP servers: ${components.mcpServers.length}`);
+      console.log(`  Extracted skills: ${components.skills.length}`);
+      console.log(`  Extracted agents: ${components.agents.length}`);
+    }
 
     // Step 3: Convert MCP servers
     const piMcpServers = convertMcpServers({ mcpServers: components.mcpServers });
+    if (verbose && Object.keys(piMcpServers).length > 0) {
+      console.log(`  Converted MCP servers: ${Object.keys(piMcpServers).join(", ")}`);
+    }
 
     // Step 4: Write MCP servers to Pi's mcp.json
     const installedMcp = await writeMcpServers(piMcpServers, spec, local);
+    if (verbose) {
+      console.log(`  Wrote ${installedMcp.length} MCP server(s) to mcp.json`);
+    }
 
     // Step 5: Copy skills
     const installedSkills: string[] = [];
@@ -193,6 +210,7 @@ export async function installPluginPackage(
       try {
         await copySkill(skill, cacheDir, local);
         installedSkills.push(skill.name);
+        if (verbose) console.log(`  Copied skill: ${skill.name} (${skill.skillMdPath})`);
       } catch (err: any) {
         // Soft-fail: preserve existing skills
         if (err.message.includes("already exists")) {
@@ -209,6 +227,7 @@ export async function installPluginPackage(
       try {
         await copyAgent(agent, cacheDir, local);
         installedAgents.push(agent.name);
+        if (verbose) console.log(`  Copied agent: ${agent.name} (${agent.agentMdPath})`);
       } catch (err: any) {
         // Soft-fail: preserve existing agents
         if (err.message.includes("already exists")) {
@@ -221,6 +240,7 @@ export async function installPluginPackage(
 
     // Step 7: Create plugin data directory
     mkdirSync(`${PLUGIN_DATA_DIR}/${spec.name}`, { recursive: true });
+    if (verbose) console.log(`  Created data directory: ${PLUGIN_DATA_DIR}/${spec.name}`);
 
     // Step 8: Register in the plugin registry
     installPlugin(
@@ -232,6 +252,7 @@ export async function installPluginPackage(
       installedAgents,
       local ? "project" : "user"
     );
+    if (verbose) console.log(`  Registered plugin in registry`);
 
     result.success = true;
     result.version = manifest.version;
@@ -356,7 +377,7 @@ async function copyAgent(
 /**
  * Uninstall a plugin: remove from registry, mcp.json, skills, agents, and cache.
  */
-export function uninstallPluginPackage(name: string, local = false): UninstallResult {
+export function uninstallPluginPackage(name: string, local = false, verbose = false): UninstallResult {
   const result: UninstallResult = {
     success: false,
     pluginName: name,
@@ -384,8 +405,14 @@ export function uninstallPluginPackage(name: string, local = false): UninstallRe
       throw new Error(`Plugin "${name}" is installed at project level. Use --local to uninstall.`);
     }
 
+    if (verbose) {
+      console.log(`  Scope: ${scope}`);
+      console.log(`  Registry entry: ${JSON.stringify(plugin)}`);
+    }
+
     // Remove MCP servers from mcp.json
     const { mcpJson: mcpJsonPath } = resolvePaths(scope);
+    if (verbose) console.log(`  MCP config path: ${mcpJsonPath}`);
     let mcpConfig: Record<string, any> = {};
 
     if (existsSync(mcpJsonPath)) {
@@ -403,6 +430,7 @@ export function uninstallPluginPackage(name: string, local = false): UninstallRe
       if (owner === name) {
         delete mcpConfig[serverName];
         result.removedMcpServers.push(serverName);
+        if (verbose) console.log(`  Removed MCP server: ${serverName}`);
       }
     }
 
@@ -417,15 +445,18 @@ export function uninstallPluginPackage(name: string, local = false): UninstallRe
     } catch {
       writeFileSync(mcpJsonPath, JSON.stringify(mcpConfig, null, 2), "utf-8");
     }
+    if (verbose) console.log(`  Written updated MCP config to ${mcpJsonPath}`);
 
     // Remove skills
     const { skillsDir } = resolvePaths(scope);
+    if (verbose) console.log(`  Skills directory: ${skillsDir}`);
 
     for (const skillName of plugin.components.skills) {
       const skillPath = join(skillsDir, skillName);
       try {
         rmSync(skillPath, { recursive: true, force: true });
         result.removedSkills.push(skillName);
+        if (verbose) console.log(`  Removed skill: ${skillName}`);
       } catch {
         // Ignore errors on skill removal
       }
@@ -433,12 +464,14 @@ export function uninstallPluginPackage(name: string, local = false): UninstallRe
 
     // Remove agents
     const { agentsDir } = resolvePaths(scope);
+    if (verbose) console.log(`  Agents directory: ${agentsDir}`);
 
     for (const agentName of plugin.components.agents) {
       const agentPath = join(agentsDir, `${agentName}.agent.md`);
       try {
         rmSync(agentPath, { force: true });
         result.removedAgents.push(agentName);
+        if (verbose) console.log(`  Removed agent: ${agentName}`);
       } catch {
         // Ignore errors on agent removal
       }
@@ -447,6 +480,7 @@ export function uninstallPluginPackage(name: string, local = false): UninstallRe
     // Remove cache directory (user-level only)
     if (scope === "user") {
       const cacheDir = PLUGIN_CACHE_DIR;
+      if (verbose) console.log(`  Removing cache directory: ${cacheDir}`);
       try {
         rmSync(cacheDir, { recursive: true, force: true });
       } catch {
@@ -456,6 +490,7 @@ export function uninstallPluginPackage(name: string, local = false): UninstallRe
 
     // Remove data directory
     const dataDir = PLUGIN_DATA_DIR;
+    if (verbose) console.log(`  Removing data directory: ${join(dataDir, name)}`);
     try {
       rmSync(join(dataDir, name), { recursive: true, force: true });
     } catch {
@@ -464,6 +499,7 @@ export function uninstallPluginPackage(name: string, local = false): UninstallRe
 
     // Remove from registry
     uninstallPlugin(name);
+    if (verbose) console.log(`  Removed from registry`);
 
     result.success = true;
   } catch (err: any) {

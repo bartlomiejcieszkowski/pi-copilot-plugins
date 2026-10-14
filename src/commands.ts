@@ -103,7 +103,7 @@ function extractNameFromUrl(url: string): string {
 
 // ─── Install Command ────────────────────────────────────────────────────────
 
-export async function cmdInstall(spec: string, local = false): Promise<InstallResult> {
+export async function cmdInstall(spec: string, local = false, verbose = false): Promise<InstallResult> {
   const pluginSpec = parseSpec(spec);
   const scope: "user" | "project" = local ? "project" : "user";
 
@@ -127,11 +127,14 @@ export async function cmdInstall(spec: string, local = false): Promise<InstallRe
   }
 
   if (local) {
-    console.log(`Installing plugin "${pluginSpec.name}" at project level...`);
+    console.log(`Installing plugin ${bold(`"${pluginSpec.name}"`)} at project level...`);
   } else {
-    console.log(`Installing plugin "${pluginSpec.name}"...`);
+    console.log(`Installing plugin ${bold(`"${pluginSpec.name}"`)}...`);
   }
-  const result = await installPluginPackage(pluginSpec, local);
+  if (verbose) {
+    console.log(`  Source: ${JSON.stringify(pluginSpec.source)}`);
+  }
+  const result = await installPluginPackage(pluginSpec, local, verbose);
 
   if (result.success) {
     console.log(green(`✓ Plugin "${pluginSpec.name}" installed successfully`));
@@ -158,13 +161,19 @@ export async function cmdInstall(spec: string, local = false): Promise<InstallRe
 
 // ─── Uninstall Command ──────────────────────────────────────────────────────
 
-export function cmdUninstall(name: string, local = false): UninstallResult {
+export function cmdUninstall(name: string, local = false, verbose = false): UninstallResult {
   if (local) {
-    console.log(`Uninstalling plugin "${name}" at project level...`);
+    console.log(`Uninstalling plugin ${bold(`"${name}"`)} at project level...`);
   } else {
-    console.log(`Uninstalling plugin "${name}"...`);
+    console.log(`Uninstalling plugin ${bold(`"${name}"`)}...`);
   }
-  const result = uninstallPluginPackage(name, local);
+  if (verbose) {
+    const plugin = getPlugin(name);
+    if (plugin) {
+      console.log(`  Registry: ${JSON.stringify(plugin)}`);
+    }
+  }
+  const result = uninstallPluginPackage(name, local, verbose);
 
   if (result.success) {
     console.log(green(`✓ Plugin "${name}" uninstalled successfully`));

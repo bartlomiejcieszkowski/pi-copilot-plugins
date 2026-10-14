@@ -90,7 +90,7 @@ async function main(): Promise<void> {
         if (args.length < 2 || args[1] === "--help" || args[1] === "-h") {
           console.log(`
 USAGE:
-  pi-copilot-plugins install <spec> [--local]
+  pi-copilot-plugins install <spec> [--local] [--verbose]
 
 Install a plugin from a marketplace, GitHub repo, or local directory.
 
@@ -103,6 +103,7 @@ SPEC FORMATS:
 
 OPTIONS:
   --local, -l         Install at project level (.pi/mcp.json, .agents/)
+  --verbose, -V       Show verbose output (download URLs, files copied, etc.)
 
 EXAMPLES:
   pi-copilot-plugins install workiq@copilot-plugins
@@ -112,7 +113,8 @@ EXAMPLES:
           break;
         }
         const local = args.includes("--local") || args.includes("-l");
-        await cmdInstall(args[1], local);
+        const verbose = args.includes("--verbose") || args.includes("-V");
+        await cmdInstall(args[1], local, verbose);
         break;
       }
 
@@ -122,12 +124,13 @@ EXAMPLES:
         if (args.length < 2 || args[1] === "--help" || args[1] === "-h") {
           console.log(`
 USAGE:
-  pi-copilot-plugins uninstall <name> [--local]
+  pi-copilot-plugins uninstall <name> [--local] [--verbose]
 
 Uninstall an installed plugin.
 
 OPTIONS:
   --local, -l         Uninstall project-level plugin
+  --verbose, -V       Show verbose output (files removed, servers removed, etc.)
 
 EXAMPLES:
   pi-copilot-plugins uninstall workiq
@@ -136,7 +139,8 @@ EXAMPLES:
           break;
         }
         const local = args.includes("--local") || args.includes("-l");
-        const result = cmdUninstall(args[1], local);
+        const verbose = args.includes("--verbose") || args.includes("-V");
+        const result = cmdUninstall(args[1], local, verbose);
         process.exit(result.success ? 0 : 1);
       }
 
