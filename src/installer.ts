@@ -165,7 +165,8 @@ export function readManifest(pluginRoot: string): PluginManifest {
 export async function installPluginPackage(
   spec: PluginSpec,
   local = false,
-  verbose = false
+  verbose = false,
+  dryRun = false
 ): Promise<InstallResult> {
   const result: InstallResult = {
     success: false,
@@ -199,24 +200,41 @@ export async function installPluginPackage(
     }
 
     // Step 4: Write MCP servers to Pi's mcp.json
-    const installedMcp = await writeMcpServers(piMcpServers, spec, local);
-    if (verbose) {
-      console.log(`  Wrote ${installedMcp.length} MCP server(s) to mcp.json`);
+    let installedMcp: string[] = [];
+    if (dryRun) {
+      // Dry run: just list what would be added
+      installedMcp = Object.keys(piMcpServers);
+      if (verbose) {
+        console.log(`  Would write ${installedMcp.length} MCP server(s) to mcp.json`);
+        for (const server of installedMcp) {
+          console.log(`    - ${server}`);
+        }
+      }
+    } else {
+      installedMcp = await writeMcpServers(piMcpServers, spec, local);
+      if (verbose) {
+        console.log(`  Wrote ${installedMcp.length} MCP server(s) to mcp.json`);
+      }
     }
 
     // Step 5: Copy skills
     const installedSkills: string[] = [];
     for (const skill of components.skills) {
-      try {
-        await copySkill(skill, cacheDir, local);
+      if (dryRun) {
         installedSkills.push(skill.name);
-        if (verbose) console.log(`  Copied skill: ${skill.name} (${skill.skillMdPath})`);
-      } catch (err: any) {
-        // Soft-fail: preserve existing skills
-        if (err.message.includes("already exists")) {
-          // Skip, don't add to installed list
-        } else {
-          throw err;
+        if (verbose) console.log(`  Would copy skill: ${skill.name} (${skill.skillMdPath})`);
+      } else {
+        try {
+          await copySkill(skill, cacheDir, local);
+          installedSkills.push(skill.name);
+          if (verbose) console.log(`  Copied skill: ${skill.name} (${skill.skillMdPath})`);
+        } catch (err: any) {
+          // Soft-fail: preserve existing skills
+          if (err.message.includes("already exists")) {
+            // Skip, don't add to installed list
+          } else {
+            throw err;
+          }
         }
       }
     }
@@ -224,35 +242,44 @@ export async function installPluginPackage(
     // Step 6: Copy agents
     const installedAgents: string[] = [];
     for (const agent of components.agents) {
-      try {
-        await copyAgent(agent, cacheDir, local);
+      if (dryRun) {
         installedAgents.push(agent.name);
-        if (verbose) console.log(`  Copied agent: ${agent.name} (${agent.agentMdPath})`);
-      } catch (err: any) {
-        // Soft-fail: preserve existing agents
-        if (err.message.includes("already exists")) {
-          // Skip, don't add to installed list
-        } else {
-          throw err;
+        if (verbose) console.log(`  Would copy agent: ${agent.name} (${agent.agentMdPath})`);
+      } else {
+        try {
+          await copyAgent(agent, cacheDir, local);
+          installedAgents.push(agent.name);
+          if (verbose) console.log(`  Copied agent: ${agent.name} (${agent.agentMdPath})`);
+        } catch (err: any) {
+          // Soft-fail: preserve existing agents
+          if (err.message.includes("already exists")) {
+            // Skip, don't add to installed list
+          } else {
+            throw err;
+          }
         }
       }
     }
 
     // Step 7: Create plugin data directory
-    mkdirSync(`${PLUGIN_DATA_DIR}/${spec.name}`, { recursive: true });
-    if (verbose) console.log(`  Created data directory: ${PLUGIN_DATA_DIR}/${spec.name}`);
+    if (!dryRun) {
+      mkdirSync(`${PLUGIN_DATA_DIR}/${spec.name}`, { recursive: true });
+      if (verbose) console.log(`  Created data directory: ${PLUGIN_DATA_DIR}/${spec.name}`);
+    }
 
     // Step 8: Register in the plugin registry
-    installPlugin(
-      spec.name,
-      spec.source,
-      manifest.version,
-      installedMcp,
-      installedSkills,
-      installedAgents,
-      local ? "project" : "user"
-    );
-    if (verbose) console.log(`  Registered plugin in registry`);
+    if (!dryRun) {
+      installPlugin(
+        spec.name,
+        spec.source,
+        manifest.version,
+        installedMcp,
+        installedSkills,
+        installedAgents,
+        local ? "project" : "user"
+      );
+      if (verbose) console.log(`  Registered plugin in registry`);
+    }
 
     result.success = true;
     result.version = manifest.version;
@@ -377,7 +404,7 @@ async function copyAgent(
 /**
  * Uninstall a plugin: remove from registry, mcp.json, skills, agents, and cache.
  */
-export function uninstallPluginPackage(name: string, local = false, verbose = false): UninstallResult {
+export function uninstallPluginPackage(name: string, local = false, verbose = false, dryRun = false): UninstallResult {
   const result: UninstallResult = {
     success: false,
     pluginName: name,
@@ -428,24 +455,28 @@ export function uninstallPluginPackage(name: string, local = false, verbose = fa
     for (const serverName of plugin.components.mcpServers) {
       const owner = getServerOwner(serverName);
       if (owner === name) {
-        delete mcpConfig[serverName];
+        if (!dryRun) {
+          delete mcpConfig[serverName];
+        }
         result.removedMcpServers.push(serverName);
-        if (verbose) console.log(`  Removed MCP server: ${serverName}`);
+        if (verbose) console.log(`  ${dryRun ? "Would remove" : "Removed"} MCP server: ${serverName}`);
       }
     }
 
-    // Atomic write
-    const tmpDir = mkdtempSync(join(tmpdir(), "pi-mcp-"));
-    const tmpFile = join(tmpDir, "mcp.json.tmp");
+    if (!dryRun) {
+      // Atomic write
+      const tmpDir = mkdtempSync(join(tmpdir(), "pi-mcp-"));
+      const tmpFile = join(tmpDir, "mcp.json.tmp");
 
-    writeFileSync(tmpFile, JSON.stringify(mcpConfig, null, 2), "utf-8");
+      writeFileSync(tmpFile, JSON.stringify(mcpConfig, null, 2), "utf-8");
 
-    try {
-      renameSync(tmpFile, mcpJsonPath);
-    } catch {
-      writeFileSync(mcpJsonPath, JSON.stringify(mcpConfig, null, 2), "utf-8");
+      try {
+        renameSync(tmpFile, mcpJsonPath);
+      } catch {
+        writeFileSync(mcpJsonPath, JSON.stringify(mcpConfig, null, 2), "utf-8");
+      }
+      if (verbose) console.log(`  Written updated MCP config to ${mcpJsonPath}`);
     }
-    if (verbose) console.log(`  Written updated MCP config to ${mcpJsonPath}`);
 
     // Remove skills
     const { skillsDir } = resolvePaths(scope);
@@ -453,12 +484,17 @@ export function uninstallPluginPackage(name: string, local = false, verbose = fa
 
     for (const skillName of plugin.components.skills) {
       const skillPath = join(skillsDir, skillName);
-      try {
-        rmSync(skillPath, { recursive: true, force: true });
+      if (dryRun) {
         result.removedSkills.push(skillName);
-        if (verbose) console.log(`  Removed skill: ${skillName}`);
-      } catch {
-        // Ignore errors on skill removal
+        if (verbose) console.log(`  Would remove skill: ${skillName}`);
+      } else {
+        try {
+          rmSync(skillPath, { recursive: true, force: true });
+          result.removedSkills.push(skillName);
+          if (verbose) console.log(`  Removed skill: ${skillName}`);
+        } catch {
+          // Ignore errors on skill removal
+        }
       }
     }
 
@@ -468,38 +504,45 @@ export function uninstallPluginPackage(name: string, local = false, verbose = fa
 
     for (const agentName of plugin.components.agents) {
       const agentPath = join(agentsDir, `${agentName}.agent.md`);
-      try {
-        rmSync(agentPath, { force: true });
+      if (dryRun) {
         result.removedAgents.push(agentName);
-        if (verbose) console.log(`  Removed agent: ${agentName}`);
-      } catch {
-        // Ignore errors on agent removal
+        if (verbose) console.log(`  Would remove agent: ${agentName}`);
+      } else {
+        try {
+          rmSync(agentPath, { force: true });
+          result.removedAgents.push(agentName);
+          if (verbose) console.log(`  Removed agent: ${agentName}`);
+        } catch {
+          // Ignore errors on agent removal
+        }
       }
     }
 
-    // Remove cache directory (user-level only)
-    if (scope === "user") {
-      const cacheDir = PLUGIN_CACHE_DIR;
-      if (verbose) console.log(`  Removing cache directory: ${cacheDir}`);
+    if (!dryRun) {
+      // Remove cache directory (user-level only)
+      if (scope === "user") {
+        const cacheDir = PLUGIN_CACHE_DIR;
+        if (verbose) console.log(`  Removing cache directory: ${cacheDir}`);
+        try {
+          rmSync(cacheDir, { recursive: true, force: true });
+        } catch {
+          // Ignore errors on cache removal
+        }
+      }
+
+      // Remove data directory
+      const dataDir = PLUGIN_DATA_DIR;
+      if (verbose) console.log(`  Removing data directory: ${join(dataDir, name)}`);
       try {
-        rmSync(cacheDir, { recursive: true, force: true });
+        rmSync(join(dataDir, name), { recursive: true, force: true });
       } catch {
-        // Ignore errors on cache removal
+        // Ignore errors on data removal
       }
-    }
 
-    // Remove data directory
-    const dataDir = PLUGIN_DATA_DIR;
-    if (verbose) console.log(`  Removing data directory: ${join(dataDir, name)}`);
-    try {
-      rmSync(join(dataDir, name), { recursive: true, force: true });
-    } catch {
-      // Ignore errors on data removal
+      // Remove from registry
+      uninstallPlugin(name);
+      if (verbose) console.log(`  Removed from registry`);
     }
-
-    // Remove from registry
-    uninstallPlugin(name);
-    if (verbose) console.log(`  Removed from registry`);
 
     result.success = true;
   } catch (err: any) {

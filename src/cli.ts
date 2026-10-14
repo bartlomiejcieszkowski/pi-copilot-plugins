@@ -90,7 +90,7 @@ async function main(): Promise<void> {
         if (args.length < 2 || args[1] === "--help" || args[1] === "-h") {
           console.log(`
 USAGE:
-  pi-copilot-plugins install <spec> [--local] [--verbose]
+  pi-copilot-plugins install <spec> [--local] [--verbose] [--dry-run]
 
 Install a plugin from a marketplace, GitHub repo, or local directory.
 
@@ -104,6 +104,7 @@ SPEC FORMATS:
 OPTIONS:
   --local, -l         Install at project level (.pi/mcp.json, .agents/)
   --verbose, -V       Show verbose output (download URLs, files copied, etc.)
+  --dry-run           Preview install without making changes
 
 EXAMPLES:
   pi-copilot-plugins install workiq@copilot-plugins
@@ -114,7 +115,8 @@ EXAMPLES:
         }
         const local = args.includes("--local") || args.includes("-l");
         const verbose = args.includes("--verbose") || args.includes("-V");
-        await cmdInstall(args[1], local, verbose);
+        const dryRun = args.includes("--dry-run");
+        await cmdInstall(args[1], local, verbose, dryRun);
         break;
       }
 
@@ -124,13 +126,14 @@ EXAMPLES:
         if (args.length < 2 || args[1] === "--help" || args[1] === "-h") {
           console.log(`
 USAGE:
-  pi-copilot-plugins uninstall <name> [--local] [--verbose]
+  pi-copilot-plugins uninstall <name> [--local] [--verbose] [--dry-run]
 
 Uninstall an installed plugin.
 
 OPTIONS:
   --local, -l         Uninstall project-level plugin
   --verbose, -V       Show verbose output (files removed, servers removed, etc.)
+  --dry-run           Preview uninstall without making changes
 
 EXAMPLES:
   pi-copilot-plugins uninstall workiq
@@ -140,7 +143,8 @@ EXAMPLES:
         }
         const local = args.includes("--local") || args.includes("-l");
         const verbose = args.includes("--verbose") || args.includes("-V");
-        const result = cmdUninstall(args[1], local, verbose);
+        const dryRun = args.includes("--dry-run");
+        const result = cmdUninstall(args[1], local, verbose, dryRun);
         process.exit(result.success ? 0 : 1);
       }
 
