@@ -581,10 +581,15 @@ async function writeMcpServers(
     }
   }
 
-  // Merge in new servers
+  // Ensure mcpServers wrapper exists
+  if (!mcpConfig.mcpServers || typeof mcpConfig.mcpServers !== "object") {
+    mcpConfig.mcpServers = {};
+  }
+
+  // Merge in new servers under mcpServers
   const installedMcp: string[] = [];
   for (const [name, server] of Object.entries(piMcpServers)) {
-    mcpConfig[name] = server;
+    mcpConfig.mcpServers[name] = server;
     installedMcp.push(name);
   }
 
@@ -708,12 +713,17 @@ export function uninstallPluginPackage(name: string, local = false, verbose = fa
       }
     }
 
+    // Ensure mcpServers wrapper exists
+    if (!mcpConfig.mcpServers || typeof mcpConfig.mcpServers !== "object") {
+      mcpConfig.mcpServers = {};
+    }
+
     // Check ownership before removing
     for (const serverName of plugin.components.mcpServers) {
       const owner = getServerOwner(serverName);
       if (owner === name) {
         if (!dryRun) {
-          delete mcpConfig[serverName];
+          delete mcpConfig.mcpServers[serverName];
         }
         result.removedMcpServers.push(serverName);
         if (verbose) console.log(`  ${dryRun ? "Would remove" : "Removed"} MCP server: ${serverName}`);
