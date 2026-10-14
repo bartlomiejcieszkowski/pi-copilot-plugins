@@ -26,7 +26,7 @@ jobs:
 
       - run: npm test
 
-      - name: Stage publish to npm
-        run: npm stage publish --provenance --access public
+      - name: publish to npm
+        run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
