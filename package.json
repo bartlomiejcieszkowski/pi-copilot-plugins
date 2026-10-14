@@ -39,7 +39,7 @@
   },
   "bugs": {
     "url": "https://github.com/bartlomiejcieszkowski/pi-copilot-plugins/issues",
-    "email": "bartlomiej@cieszkowski.dev"
+    "email": "bartlomiej.cieszkowski@gmail.com"
   },
   "repository": {
     "type": "git",
@@ -47,6 +47,7 @@
   },
   "homepage": "https://github.com/bartlomiejcieszkowski/pi-copilot-plugins",
   "keywords": ["pi-package", "pi", "pi-coding-agent", "extension", "copilot", "plugin", "marketplace", "copilot-plugins", "pi-copilot-plugins"],
+  "author": "Bartlomiej Cieszkowski <bartlomiej.cieszkowski@gmail.com>",
   "license": "MIT",
   "pi": {
     "extensions": [
