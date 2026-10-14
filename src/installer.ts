@@ -23,6 +23,7 @@ import {
   installPlugin,
   unregisterMarketplace,
   readRegistry,
+  writeRegistry,
   getServerOwner,
   uninstallPlugin,
 } from "./registry.js";
@@ -43,6 +44,15 @@ import {
 } from "node:fs";
 import { join, dirname } from "node:path";
 import { fetch } from "undici";
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+/** Ensure a directory exists, creating it and all parents if needed. */
+function ensureDir(path: string): void {
+  if (!existsSync(path)) {
+    mkdirSync(path, { recursive: true });
+  }
+}
 
 // ─── Plugin Peek ────────────────────────────────────────────────────────────
 
@@ -762,6 +772,163 @@ export function uninstallPluginPackage(name: string, local = false, verbose = fa
       // Remove from registry
       uninstallPlugin(name);
       if (verbose) console.log(`  Removed from registry`);
+    }
+
+    result.success = true;
+  } catch (err: any) {
+    result.success = false;
+    result.errors = [err.message];
+  }
+
+  return result;
+}
+
+// ─── Plugin Update ──────────────────────────────────────────────────────────
+
+/**
+ * Update a plugin: re-download, extract, and merge updated components.
+ */
+export async function updatePluginPackage(
+  name: string,
+  local = false,
+  verbose = false,
+  dryRun = false,
+  yes = false,
+  outputDir?: string,
+  backup = false
+): Promise<InstallResult> {
+  const result: InstallResult = {
+    success: false,
+    pluginName: name,
+    mcpServers: [],
+    skills: [],
+    agents: [],
+  };
+
+  try {
+    const registry = readRegistry();
+    const plugin = registry.plugins[name];
+
+    if (!plugin) {
+      throw new Error(`Plugin "${name}" is not installed`);
+    }
+
+    if (verbose) {
+      console.log(`  Updating plugin: ${name}`);
+      console.log(`  Source: ${JSON.stringify(plugin.source)}`);
+    }
+
+    // Re-download the plugin (same as install but reuses cache if unchanged)
+    const pluginSpec: PluginSpec = { name, source: plugin.source };
+    const downloadResult = await downloadPlugin(pluginSpec);
+
+    if (!downloadResult.manifest) {
+      throw new Error(`No manifest found for plugin "${name}"`);
+    }
+
+    // Extract components from the downloaded plugin
+    const components = extractPluginComponents(downloadResult.manifest, downloadResult.cacheDir);
+
+    if (verbose) {
+      console.log(`  Extracted ${components.mcpServers.length} MCP server(s), ${components.skills.length} skill(s), ${components.agents.length} agent(s)`);
+    }
+
+    // Merge MCP servers into mcp.json
+    const { mcpJson } = resolvePaths(local ? "project" : "user");
+    let piMcpServers: Record<string, any> = {};
+
+    if (existsSync(mcpJson)) {
+      try {
+        const content = readFileSync(mcpJson, "utf-8");
+        piMcpServers = JSON.parse(content);
+      } catch {
+        // Invalid JSON, start fresh
+      }
+    }
+
+    // Convert and merge MCP servers
+    const converted = convertMcpServers({ mcpServers: components.mcpServers });
+    
+    for (const [serverName, piServer] of Object.entries(converted)) {
+      if (verbose) {
+        console.log(`  Adding MCP server: ${serverName} (${piServer.type || "stdio"})`);
+      }
+      piMcpServers[serverName] = piServer;
+      result.mcpServers.push(serverName);
+    }
+
+    // Write MCP servers (atomic)
+    if (!dryRun) {
+      const tmpDirName = mkdtempSync(join(tmpdir(), "pi-mcp-"));
+      const tmpFile = join(tmpDirName, "mcp.json.tmp");
+
+      writeFileSync(tmpFile, JSON.stringify(piMcpServers, null, 2), "utf-8");
+
+      try {
+        renameSync(tmpFile, mcpJson);
+      } catch {
+        writeFileSync(mcpJson, JSON.stringify(piMcpServers, null, 2), "utf-8");
+      }
+      if (verbose) console.log(`  Written updated MCP config to ${mcpJson}`);
+    }
+
+    // Copy skills (overwrite existing)
+    for (const skill of components.skills) {
+      const skillMdPath = join(downloadResult.cacheDir, skill.skillMdPath);
+      if (dryRun) {
+        result.skills.push(skill.name);
+        if (verbose) console.log(`  Would update skill: ${skill.name}`);
+      } else {
+        try {
+          const content = readFileSync(skillMdPath, "utf-8");
+          const destPath = join(SKILLS_DIR, skill.name, "SKILL.md");
+          ensureDir(dirname(destPath));
+          writeFileSync(destPath, content, "utf-8");
+          result.skills.push(skill.name);
+          if (verbose) console.log(`  Updated skill: ${skill.name}`);
+        } catch {
+          // Ignore errors on skill copy
+        }
+      }
+    }
+
+    // Copy agents (overwrite existing)
+    for (const agent of components.agents) {
+      const agentMdPath = join(downloadResult.cacheDir, agent.agentMdPath);
+      if (dryRun) {
+        result.agents.push(agent.name);
+        if (verbose) console.log(`  Would update agent: ${agent.name}`);
+      } else {
+        try {
+          const content = readFileSync(agentMdPath, "utf-8");
+          const destPath = join(AGENTS_SKILLS_DIR, `${agent.name}.agent.md`);
+          ensureDir(dirname(destPath));
+          writeFileSync(destPath, content, "utf-8");
+          result.agents.push(agent.name);
+          if (verbose) console.log(`  Updated agent: ${agent.name}`);
+        } catch {
+          // Ignore errors on agent copy
+        }
+      }
+    }
+
+    // Update registry entry with new version/SHA
+    if (!dryRun) {
+      const manifestVersion = "version" in downloadResult.manifest && downloadResult.manifest.version ? downloadResult.manifest.version : undefined;
+      registry.plugins[name] = {
+        ...plugin,
+        version: manifestVersion || plugin.version,
+        sha: downloadResult.sha || plugin.sha,
+        components: {
+          mcpServers: Object.keys(components.mcpServers),
+          skills: components.skills.map(s => s.name),
+          agents: components.agents.map(a => a.name),
+        },
+        cacheDir: downloadResult.cacheDir,
+        installedAt: plugin.installedAt,
+      };
+      writeRegistry(registry);
+      if (verbose) console.log(`  Updated registry entry`);
     }
 
     result.success = true;
