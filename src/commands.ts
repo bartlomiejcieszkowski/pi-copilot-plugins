@@ -618,6 +618,15 @@ export async function cmdPeek(spec: string, json = false): Promise<void> {
     return;
   }
 
+  // Check if any results have installable components
+  const hasInstallable = results.some(r => r.mcpServers?.length || r.skills?.length || r.agents?.length);
+  if (!hasInstallable) {
+    console.log(cyan(`Found "${pluginName}" but no installable components (MCP servers, skills, or agents).`));
+    console.log(`  These plugins may only contain Copilot-specific extensions, which are not supported by Pi.`);
+    console.log(`  Try installing from a different marketplace or source.`);
+    return;
+  }
+
   for (const result of results) {
     console.log(bold(`\n${result.name}${result.version ? ` v${result.version}` : ""}`));
     console.log(`  from ${result.marketplace}`);

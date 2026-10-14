@@ -186,20 +186,30 @@ export function registerDefaultMarketplace(): void {
 
 /**
  * Convert a marketplace plugin source to a PluginSource.
+ * @param marketplaceSource - The full repo path of the marketplace (e.g. "github/awesome-copilot").
+ *                            Used when plugin.source is a subdirectory path within the marketplace.
  */
 export function marketplacePluginToSpec(
   plugin: MarketplacePlugin,
-  marketplaceName: string
+  marketplaceSource: string
 ): PluginSpec {
   let source: PluginSource;
 
   if (typeof plugin.source === "string") {
-    // Direct path string — could be a GitHub repo reference or local path
-    if (plugin.source.includes("/")) {
-      const [owner, repo] = plugin.source.split("/");
-      source = { type: "github", repo: `${owner}/${repo}` };
+    // Direct path string — check if it's a subdirectory within the marketplace repo
+    // vs a standalone GitHub repo reference
+    const parts = plugin.source.split("/");
+    
+    // Known directory patterns that indicate a subdirectory within the marketplace
+    const subdirectoryPatterns = ["plugins", "agents", "skills", "mcp", "tools", "extensions"];
+    const isSubdirectory = parts.length > 2 || subdirectoryPatterns.includes(parts[0]);
+    
+    if (isSubdirectory) {
+      // Subdirectory within the marketplace repo
+      source = { type: "github", repo: marketplaceSource, path: plugin.source };
     } else {
-      source = { type: "local", path: plugin.source };
+      // Standalone GitHub repo
+      source = { type: "github", repo: plugin.source };
     }
   } else if (typeof plugin.source === "object" && "source" in plugin.source) {
     // MarketplaceSource with source: "github"
