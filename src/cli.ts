@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 import { cmdInstall, cmdUninstall, cmdList, cmdUpdate, cmdEnable, cmdDisable, cmdMarketplaceAdd, cmdMarketplaceList, cmdMarketplaceBrowse, cmdMarketplaceRefresh, cmdMarketplaceRemove, cmdSearch, parseSpec } from "./commands.js";
-import { bold, cyan, gray } from "./colors.js";
+import { bold, cyan, gray, red } from "./colors.js";
+import { formatError } from "./errors.js";
 
 const VERSION = "0.1.0";
 
@@ -253,9 +254,13 @@ EXAMPLES:
     }
   } catch (err: any) {
     if (err.message) {
-      console.error(`Error: ${err.message}`);
+      const formatted = formatError(err.message, {
+        type: err.type || "general",
+        name: err.name,
+      });
+      console.error(red(`Error: ${formatted}`));
     }
-    // Exit code: 1 = general error, 3 = plugin not found
+    // Exit code: 1 = general error, 2 = usage, 3 = plugin not found
     if (err.message?.includes("not found")) {
       process.exit(3);
     }
