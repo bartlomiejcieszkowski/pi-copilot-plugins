@@ -119,11 +119,11 @@ export async function cmdInstall(spec: string, local = false, verbose = false, d
     }
 
     const plugin = await findPluginInMarketplace(marketplace.source, pluginSpec.name);
-    if (!plugin) {
+    if (!plugin.plugin) {
       throw new Error(`Plugin "${pluginSpec.name}" not found in marketplace "${marketplaceName}"`);
     }
 
-    pluginSpec.source = { ...marketplacePluginToSpec(plugin, marketplaceName).source, scope };
+    pluginSpec.source = { ...marketplacePluginToSpec(plugin.plugin, marketplaceName).source, scope };
   }
 
   if (dryRun) {
@@ -352,7 +352,11 @@ export async function cmdMarketplaceBrowse(name: string, json = false): Promise<
     throw new Error(`Marketplace "${name}" not found`);
   }
 
-  const plugins = await listMarketplacePlugins(marketplace.source);
+  const { plugins, stale } = await listMarketplacePlugins(marketplace.source);
+
+  if (stale) {
+    console.log(gray(`  (cached — last updated over 24h ago. Run "marketplace refresh ${name}" to update)`));
+  }
 
   if (json) {
     console.log(JSON.stringify(plugins, null, 2));
@@ -376,14 +380,14 @@ export async function cmdMarketplaceRefresh(name?: string): Promise<void> {
     }
 
     // Re-fetch the marketplace to verify it's accessible
-    await listMarketplacePlugins(marketplace.source);
+    await listMarketplacePlugins(marketplace.source, true);
     console.log(`✓ Marketplace "${name}" refreshed.`);
   } else {
     const marketplaces = listMarketplaces();
     console.log(`Refreshing ${marketplaces.length} marketplaces...`);
     for (const mp of marketplaces) {
       try {
-        await listMarketplacePlugins(mp.source);
+        await listMarketplacePlugins(mp.source, true);
         console.log(`  ✓ ${mp.source}`);
       } catch (err: any) {
         console.log(`  ✗ ${mp.source}: ${err.message}`);
@@ -422,12 +426,14 @@ export function cmdMarketplaceRemove(name: string, force = false): void {
 
 export async function cmdSearch(query: string, json = false): Promise<void> {
   const plugins: { name: string; description?: string; source?: string }[] = [];
+  let anyStale = false;
 
   // Search in all registered marketplaces
   const marketplaces = listMarketplaces();
   for (const mp of marketplaces) {
     try {
-      const results = await searchMarketplacePlugins(mp.source, query);
+      const { results, stale } = await searchMarketplacePlugins(mp.source, query);
+      if (stale) anyStale = true;
       for (const r of results) {
         plugins.push({
           name: r.name,
@@ -443,6 +449,10 @@ export async function cmdSearch(query: string, json = false): Promise<void> {
   if (json) {
     console.log(JSON.stringify(plugins, null, 2));
     return;
+  }
+
+  if (anyStale) {
+    console.log(gray(`  (some results from cached marketplace — run "marketplace refresh" to update)`));
   }
 
   if (plugins.length === 0) {
@@ -504,7 +514,7 @@ export async function cmdPeek(spec: string, json = false): Promise<void> {
     if (targetMarketplace && mp.source !== targetMarketplace) continue;
 
     try {
-      const plugins = await listMarketplacePlugins(mp.source);
+      const { plugins, stale } = await listMarketplacePlugins(mp.source);
       const match = plugins.find(p => p.name.toLowerCase() === pluginName.toLowerCase());
       if (!match) continue;
 

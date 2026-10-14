@@ -16,8 +16,9 @@ const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Get the cached marketplace manifest for a source, if available and fresh.
+ * Returns { manifest, stale } where stale indicates if cache is older than 24h.
  */
-function getCachedMarketplace(source: string): MarketplaceManifest | null {
+function getCachedMarketplace(source: string): { manifest: MarketplaceManifest; stale: boolean } | null {
   try {
     if (!existsSync(FRESHNESS_FILE)) return null;
 
@@ -25,13 +26,13 @@ function getCachedMarketplace(source: string): MarketplaceManifest | null {
     const cacheTime = freshness[source];
     if (!cacheTime) return null;
 
-    // Check if cache is still fresh
-    if (Date.now() - cacheTime < CACHE_TTL_MS) {
-      const cachePath = join(MARKETPLACE_CACHE_DIR, source.replace(/\//g, "_") + "-marketplace.json");
-      if (existsSync(cachePath)) {
-        return JSON.parse(readFileSync(cachePath, "utf-8")) as MarketplaceManifest;
-      }
-    }
+    const cachePath = join(MARKETPLACE_CACHE_DIR, source.replace(/\//g, "_") + "-marketplace.json");
+    if (!existsSync(cachePath)) return null;
+
+    const manifest = JSON.parse(readFileSync(cachePath, "utf-8")) as MarketplaceManifest;
+    const stale = Date.now() - cacheTime >= CACHE_TTL_MS;
+
+    return { manifest, stale };
   } catch {
     // Ignore cache read errors
   }
@@ -67,13 +68,17 @@ function cacheMarketplace(source: string, manifest: MarketplaceManifest): void {
 
 /**
  * Fetch a marketplace manifest from a GitHub repository.
- * Uses local cache if available and fresh (24h TTL).
+ * Uses local cache if available. Returns { manifest, stale }.
+ * Stale means cache is older than 24h — still returned but user is warned.
+ * @param force - If true, bypass cache and always fetch from network.
  */
-export async function fetchMarketplace(source: string): Promise<MarketplaceManifest> {
-  // Check cache first
-  const cached = getCachedMarketplace(source);
-  if (cached) {
-    return cached;
+export async function fetchMarketplace(source: string, force = false): Promise<{ manifest: MarketplaceManifest; stale: boolean }> {
+  // Check cache first (unless forced)
+  if (!force) {
+    const cached = getCachedMarketplace(source);
+    if (cached) {
+      return cached;
+    }
   }
 
   // Parse the source (owner/repo format)
@@ -100,44 +105,51 @@ export async function fetchMarketplace(source: string): Promise<MarketplaceManif
   // Cache the result
   cacheMarketplace(source, manifest);
 
-  return manifest;
+  return { manifest, stale: false };
 }
 
 /**
  * List plugins from a marketplace.
+ * @param force - If true, bypass cache and always fetch from network.
  */
-export async function listMarketplacePlugins(source: string): Promise<MarketplacePlugin[]> {
-  const marketplace = await fetchMarketplace(source);
-  return marketplace.plugins;
+export async function listMarketplacePlugins(source: string, force = false): Promise<{ plugins: MarketplacePlugin[]; stale: boolean }> {
+  const { manifest, stale } = await fetchMarketplace(source, force);
+  return { plugins: manifest.plugins, stale };
 }
 
 /**
  * Find a plugin by name in a marketplace.
+ * @param force - If true, bypass cache and always fetch from network.
  */
 export async function findPluginInMarketplace(
   source: string,
-  name: string
-): Promise<MarketplacePlugin | undefined> {
-  const plugins = await listMarketplacePlugins(source);
-  return plugins.find((p) => p.name === name);
+  name: string,
+  force = false
+): Promise<{ plugin: MarketplacePlugin | undefined; stale: boolean }> {
+  const { plugins, stale } = await listMarketplacePlugins(source, force);
+  return { plugin: plugins.find((p) => p.name === name), stale };
 }
 
 /**
  * Search plugins in a marketplace by keyword.
+ * @param force - If true, bypass cache and always fetch from network.
  */
 export async function searchMarketplacePlugins(
   source: string,
-  query: string
-): Promise<MarketplacePlugin[]> {
-  const plugins = await listMarketplacePlugins(source);
+  query: string,
+  force = false
+): Promise<{ results: MarketplacePlugin[]; stale: boolean }> {
+  const { plugins, stale } = await listMarketplacePlugins(source, force);
   const lowerQuery = query.toLowerCase();
 
-  return plugins.filter(
+  const results = plugins.filter(
     (p) =>
       p.name.toLowerCase().includes(lowerQuery) ||
       (p.description && p.description.toLowerCase().includes(lowerQuery)) ||
       (p.keywords && p.keywords.some((k) => k.toLowerCase().includes(lowerQuery)))
   );
+
+  return { results, stale };
 }
 
 /**

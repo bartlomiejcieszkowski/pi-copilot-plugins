@@ -162,9 +162,17 @@ async function handleBrowse(marketplace: string, query?: string): Promise<{ cont
 
     let plugins;
     if (query) {
-      plugins = await searchMarketplacePlugins(marketplaceInfo.source, query);
+      const { results, stale } = await searchMarketplacePlugins(marketplaceInfo.source, query);
+      plugins = results;
+      if (stale) {
+        // Note: using cached marketplace
+      }
     } else {
-      plugins = await listMarketplacePlugins(marketplaceInfo.source);
+      const { plugins: pl, stale } = await listMarketplacePlugins(marketplaceInfo.source);
+      plugins = pl;
+      if (stale) {
+        // Note: using cached marketplace
+      }
     }
 
     let output = `Plugins in "${marketplace}"${query ? ` matching "${query}"` : ""}:\n\n`;
