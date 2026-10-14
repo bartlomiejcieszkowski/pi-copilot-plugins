@@ -41,6 +41,99 @@ import {
   renameSync,
 } from "node:fs";
 import { join, dirname } from "node:path";
+import { fetch } from "undici";
+
+// ─── Plugin Peek ────────────────────────────────────────────────────────────
+
+/**
+ * Peek at a plugin's manifest without downloading the full repository.
+ * Uses GitHub API for GitHub repos, git archive for git URLs.
+ * Returns null if the manifest cannot be read.
+ */
+export async function peekManifest(spec: PluginSpec): Promise<PluginManifest | null> {
+  try {
+    if (spec.source.type === "github") {
+      const { repo, path: subPath } = spec.source;
+
+      // Try .github/plugin.json first (Agent Plugins 1.0)
+      const apiUrl = subPath
+        ? `https://api.github.com/repos/${repo}/contents/${subPath}/plugin.json`
+        : `https://api.github.com/repos/${repo}/contents/.github/plugin.json`;
+
+      let response = await fetch(apiUrl, {
+        headers: { Accept: "application/vnd.github.v3+json" },
+      });
+
+      if (response.ok) {
+        const data = await response.json() as { content: string };
+        const decoded = Buffer.from(data.content, "base64").toString("utf-8");
+        try {
+          const manifest = JSON.parse(decoded) as PluginManifest;
+          if ("$schema" in manifest) {
+            return manifest;
+          }
+        } catch {
+          // Not valid JSON, try legacy format
+        }
+      }
+
+      // Try legacy format: .mcp.json or .github/mcp.json
+      const legacyPaths = [".mcp.json", ".github/mcp.json"];
+      for (const legacyPath of legacyPaths) {
+        const legacyUrl = `https://api.github.com/repos/${repo}/contents/${legacyPath}`;
+        response = await fetch(legacyUrl, {
+          headers: { Accept: "application/vnd.github.v3+json" },
+        });
+
+        if (response.ok) {
+          const data = await response.json() as { content: string };
+          const decoded = Buffer.from(data.content, "base64").toString("utf-8");
+          try {
+            const config = JSON.parse(decoded);
+            // Create a legacy manifest from the MCP config
+            return createLegacyManifestFromContent(repo, subPath, config);
+          } catch {
+            // Not valid JSON
+          }
+        }
+      }
+
+      return null;
+    }
+
+    if (spec.source.type === "git") {
+      // For git URLs, try to get the archive and extract manifest
+      // This is more complex and may not be worth implementing for now
+      return null;
+    }
+
+    if (spec.source.type === "local") {
+      // For local paths, read the manifest directly
+      const manifest = readManifest(spec.source.path);
+      return manifest;
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Create a legacy manifest from MCP config content.
+ */
+function createLegacyManifestFromContent(
+  repo: string,
+  subPath: string | undefined,
+  config: Record<string, unknown>
+): PluginManifest {
+  return {
+    $schema: "https://copilot-plugins.dev/schemas/legacy/v0.json",
+    name: repo.split("/").pop() || "unknown",
+    mcpServers: Array.isArray(config) ? config : [],
+    skills: subPath ? [subPath] : [],
+  };
+}
 
 // ─── Plugin Download ────────────────────────────────────────────────────────
 

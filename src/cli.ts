@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { cmdInstall, cmdUninstall, cmdList, cmdUpdate, cmdEnable, cmdDisable, cmdMarketplaceAdd, cmdMarketplaceList, cmdMarketplaceBrowse, cmdMarketplaceRefresh, cmdMarketplaceRemove, cmdSearch, parseSpec } from "./commands.js";
+import { cmdInstall, cmdUninstall, cmdList, cmdUpdate, cmdEnable, cmdDisable, cmdMarketplaceAdd, cmdMarketplaceList, cmdMarketplaceBrowse, cmdMarketplaceRefresh, cmdMarketplaceRemove, cmdSearch, cmdPeek, parseSpec } from "./commands.js";
 import { bold, cyan, gray, red } from "./colors.js";
 import { formatError } from "./errors.js";
 
@@ -75,6 +75,31 @@ async function main(): Promise<void> {
 
   try {
     switch (command) {
+      case "peek": {
+        const nonFlagArgs = args.slice(1).filter(a => !a.startsWith("--"));
+        const jsonFlag = args.includes("--json");
+        if (nonFlagArgs.length < 1) {
+          console.log(`
+USAGE:
+  pi-copilot-plugins peek <name> [marketplace-source] [--json]
+
+Preview a plugin's manifest and components without downloading.
+Searches all registered marketplaces (or a specific one if scoped).
+
+OPTIONS:
+  --json                Output as JSON
+
+EXAMPLES:
+  pi-copilot-plugins peek agent-council
+  pi-copilot-plugins peek agent-council@github/awesome-copilot
+  pi-copilot-plugins peek agent-council --json
+`);
+          break;
+        }
+        const spec = nonFlagArgs[0];
+        await cmdPeek(spec, jsonFlag);
+        break;
+      }
       case "--version":
       case "-v":
         console.log(VERSION);

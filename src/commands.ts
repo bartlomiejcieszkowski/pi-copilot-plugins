@@ -1,5 +1,5 @@
 import type { PluginSpec, PluginSource, InstallResult, UninstallResult } from "./types.js";
-import { installPluginPackage, uninstallPluginPackage } from "./installer.js";
+import { installPluginPackage, uninstallPluginPackage, peekManifest } from "./installer.js";
 import {
   listPlugins,
   registerMarketplace,
@@ -455,6 +455,119 @@ export async function cmdSearch(query: string, json = false): Promise<void> {
     console.log(`  ${cyan(plugin.name)}${plugin.description ? gray(` - ${plugin.description}`) : ""}`);
     if (plugin.source) {
       console.log(`    from ${plugin.source}`);
+    }
+  }
+}
+
+// ─── Peek Command ────────────────────────────────────────────────────────────
+
+interface PeekResult {
+  marketplace: string;
+  name: string;
+  version?: string;
+  description?: string;
+  source: string;
+  mcpServers?: string[];
+  skills?: string[];
+  agents?: string[];
+  warnings?: string[];
+}
+
+/**
+ * Peek at a plugin's manifest and components without downloading.
+ * Searches all registered marketplaces (or a specific one if scoped).
+ */
+export async function cmdPeek(spec: string, json = false): Promise<void> {
+  const marketplaces = listMarketplaces();
+  if (marketplaces.length === 0) {
+    console.log("No marketplaces registered. Add one with:");
+    console.log("  pi-copilot-plugins marketplace add github/awesome-copilot");
+    return;
+  }
+
+  const results: PeekResult[] = [];
+
+  // Check if spec is scoped to a marketplace: name@marketplace-source
+  let targetMarketplace: string | null = null;
+  let pluginName: string;
+
+  if (spec.includes("@")) {
+    const [name, marketplaceSource] = spec.split("@");
+    pluginName = name;
+    targetMarketplace = marketplaceSource;
+  } else {
+    pluginName = spec;
+  }
+
+  for (const mp of marketplaces) {
+    // Skip if scoped to a specific marketplace that doesn't match
+    if (targetMarketplace && mp.source !== targetMarketplace) continue;
+
+    try {
+      const plugins = await listMarketplacePlugins(mp.source);
+      const match = plugins.find(p => p.name.toLowerCase() === pluginName.toLowerCase());
+      if (!match) continue;
+
+      // Convert to PluginSpec for peekManifest
+      const pluginSpec = marketplacePluginToSpec(match, mp.source);
+
+      // Peek the manifest
+      const manifest = await peekManifest(pluginSpec);
+      if (!manifest) continue;
+
+      const result: PeekResult = {
+        marketplace: mp.source,
+        name: match.name,
+        version: match.version,
+        description: match.description,
+        source: typeof match.source === "string" ? match.source : JSON.stringify(match.source),
+        mcpServers: "mcpServers" in manifest ? (manifest.mcpServers as { name?: string }[]).map(s => s.name || "unknown") : [],
+        skills: "skills" in manifest ? (manifest.skills as { name?: string }[]).map(s => s.name || "unknown") : [],
+        agents: "agents" in manifest ? (manifest.agents as { name?: string }[]).map(a => a.name || "unknown") : [],
+      };
+
+      // Check for warnings
+      if (!result.mcpServers?.length && !result.skills?.length && !result.agents?.length) {
+        result.warnings = ["No installable components (MCP servers, skills, or agents) found. Plugin may contain only Copilot-specific extensions."];
+      }
+
+      results.push(result);
+    } catch {
+      // Skip marketplace fetch errors
+    }
+  }
+
+  if (json) {
+    console.log(JSON.stringify(results, null, 2));
+    return;
+  }
+
+  if (results.length === 0) {
+    console.log(`No plugin found matching "${pluginName}"${targetMarketplace ? ` in ${targetMarketplace}` : ""}.`);
+    return;
+  }
+
+  for (const result of results) {
+    console.log(bold(`\n${result.name}${result.version ? ` v${result.version}` : ""}`));
+    console.log(`  from ${result.marketplace}`);
+    if (result.description) {
+      console.log(`  ${result.description}`);
+    }
+    console.log(`  source: ${result.source}`);
+
+    if (result.mcpServers?.length) {
+      console.log(`  MCP servers: ${result.mcpServers.join(", ")}`);
+    }
+    if (result.skills?.length) {
+      console.log(`  Skills: ${result.skills.join(", ")}`);
+    }
+    if (result.agents?.length) {
+      console.log(`  Agents: ${result.agents.join(", ")}`);
+    }
+    if (result.warnings?.length) {
+      for (const w of result.warnings) {
+        console.log(red(`  ⚠️  ${w}`));
+      }
     }
   }
 }

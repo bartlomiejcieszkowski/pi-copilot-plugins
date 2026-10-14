@@ -1,13 +1,81 @@
 import type { MarketplaceManifest, MarketplacePlugin, PluginSpec, PluginSource } from "./types.js";
 import { readRegistry, registerMarketplace } from "./registry.js";
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { join } from "node:path";
+import { PI_AGENT_DIR } from "./types.js";
 
 const DEFAULT_MARKETPLACE = "copilot-plugins";
 const DEFAULT_MARKETPLACE_SOURCE = "github/copilot-plugins";
 
+// Cache directory for marketplace manifests
+const MARKETPLACE_CACHE_DIR = join(PI_AGENT_DIR, "copilot-plugins-marketplaces");
+const FRESHNESS_FILE = join(MARKETPLACE_CACHE_DIR, "freshness.json");
+
+// Cache TTL: 24 hours in milliseconds
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Get the cached marketplace manifest for a source, if available and fresh.
+ */
+function getCachedMarketplace(source: string): MarketplaceManifest | null {
+  try {
+    if (!existsSync(FRESHNESS_FILE)) return null;
+
+    const freshness = JSON.parse(readFileSync(FRESHNESS_FILE, "utf-8")) as Record<string, number>;
+    const cacheTime = freshness[source];
+    if (!cacheTime) return null;
+
+    // Check if cache is still fresh
+    if (Date.now() - cacheTime < CACHE_TTL_MS) {
+      const cachePath = join(MARKETPLACE_CACHE_DIR, source.replace(/\//g, "_") + "-marketplace.json");
+      if (existsSync(cachePath)) {
+        return JSON.parse(readFileSync(cachePath, "utf-8")) as MarketplaceManifest;
+      }
+    }
+  } catch {
+    // Ignore cache read errors
+  }
+  return null;
+}
+
+/**
+ * Cache a marketplace manifest locally.
+ */
+function cacheMarketplace(source: string, manifest: MarketplaceManifest): void {
+  try {
+    mkdirSync(MARKETPLACE_CACHE_DIR, { recursive: true });
+
+    // Save manifest
+    const cachePath = join(MARKETPLACE_CACHE_DIR, source.replace(/\//g, "_") + "-marketplace.json");
+    writeFileSync(cachePath, JSON.stringify(manifest, null, 2));
+
+    // Update freshness timestamp
+    let freshness: Record<string, number> = {};
+    if (existsSync(FRESHNESS_FILE)) {
+      try {
+        freshness = JSON.parse(readFileSync(FRESHNESS_FILE, "utf-8")) as Record<string, number>;
+      } catch {
+        // Ignore parse errors
+      }
+    }
+    freshness[source] = Date.now();
+    writeFileSync(FRESHNESS_FILE, JSON.stringify(freshness, null, 2));
+  } catch {
+    // Ignore cache write errors
+  }
+}
+
 /**
  * Fetch a marketplace manifest from a GitHub repository.
+ * Uses local cache if available and fresh (24h TTL).
  */
 export async function fetchMarketplace(source: string): Promise<MarketplaceManifest> {
+  // Check cache first
+  const cached = getCachedMarketplace(source);
+  if (cached) {
+    return cached;
+  }
+
   // Parse the source (owner/repo format)
   const [owner, repo] = source.split("/");
 
@@ -27,7 +95,12 @@ export async function fetchMarketplace(source: string): Promise<MarketplaceManif
     throw new Error(`Failed to fetch marketplace from ${source}: HTTP ${response.status}`);
   }
 
-  return response.json() as Promise<MarketplaceManifest>;
+  const manifest = (await response.json()) as MarketplaceManifest;
+
+  // Cache the result
+  cacheMarketplace(source, manifest);
+
+  return manifest;
 }
 
 /**
