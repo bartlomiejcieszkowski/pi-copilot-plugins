@@ -7,6 +7,7 @@ import type { PluginSpec } from "./types.js";
 import { registerDefaultMarketplace, listMarketplacePlugins, findPluginInMarketplace, searchMarketplacePlugins, marketplacePluginToSpec, fetchMarketplace } from "./marketplace.js";
 import { installPluginPackage, uninstallPluginPackage, updatePluginPackage, peekManifest, peekSkills } from "./installer.js";
 import { listPlugins, enablePlugin, disablePlugin, getMarketplace, getPlugin, uninstallPlugin, registerMarketplace, unregisterMarketplace, listMarketplaces } from "./registry.js";
+import { getToolState, setToolEnabled, TOOL_NAMES } from "./types.js";
 
 // ─── TypeBox Schemas ────────────────────────────────────────────────────────
 
@@ -73,6 +74,34 @@ const MarketplaceRemoveParams = Type.Object({
   name: Type.String({ description: "Marketplace name or source to remove" }),
 });
 
+const ToolsToggleParams = Type.Object({
+  enabled: Type.Boolean({ description: "Enable (true) or disable (false) all tools" }),
+});
+
+// ─── Tool Registry State ─────────────────────────────────────────────────────
+
+let toolsEnabled = false;
+
+/**
+ * Re-register all tools with the given exposure.
+ */
+
+/**
+ * Register a tool with a specific exposure.
+ */
+function registerToolWithExposure(
+  pi: ExtensionAPI,
+  name: string,
+  def: Omit<ToolDefinition, "name" | "exposure">,
+  exposure: "direct" | "hidden"
+): void {
+  pi.registerTool({ ...def, name, exposure } as ToolDefinition);
+}
+
+const ToolsToggleParams = Type.Object({
+  enabled: Type.Boolean({ description: "Enable (true) or disable (false) all tools" }),
+});
+
 // ─── Namespace ──────────────────────────────────────────────────────────────
 
 const COPILOT_PLUGINS_NAMESPACE: ToolNamespace = {
@@ -130,296 +159,237 @@ export default function (pi: ExtensionAPI): void {
     },
   });
 
-  // ─── Browse Tool ─────────────────────────────────────────────────────────
+
+  // ─── Initial Registration: all tools hidden ──────────────────────────────
+
+  reRegisterTools("hidden");
+
+  // ─── Tools Toggle Tool ─────────────────────────────────────────────────────
 
   pi.registerTool({
-    name: "copilot_plugins_browse",
-    label: "Browse Copilot Plugins",
-    description: "Browse plugins in a GitHub Copilot plugin marketplace. Lists available Copilot plugins with their names, versions, and descriptions.",
-    promptSnippet: "Browse available GitHub Copilot plugins in a marketplace",
+    name: "copilot_plugins_tools_toggle",
+    label: "Toggle Copilot Tools",
+    description: "Enable or disable all Copilot plugin tools. When disabled, tools are hidden from the model to save context. When enabled, all 14 tools become available for the model to use.",
+    promptSnippet: "Toggle Copilot plugin tools on/off",
     promptGuidelines: [
-      "Use this tool to discover what Copilot plugins are available before installing",
-      "Specify a marketplace name (default: 'copilot-plugins')",
-      "Optionally provide a search query to filter results",
+      "Use this to enable tools when the model needs to browse, install, or manage plugins",
+      "Tools are disabled by default to save context",
+      "Enable tools when you need to install, browse, search, or manage plugins",
+      "Disable tools again after you're done to save context",
     ],
-    parameters: BrowseParams,
+    parameters: ToolsToggleParams,
     exposure: "direct",
     namespace: COPILOT_PLUGINS_NAMESPACE,
-    annotations: BROWSE_ANNOTATIONS,
-    execute: async (toolCallId, params, signal, onUpdate, ctx) => {
-      return handleBrowse(params.marketplace, params.query);
-    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    execute: async (toolCallId, params, signal, onUpdate, ctx) => handleToolsToggle(params.enabled),
   });
 
-  // ─── Install Tool ────────────────────────────────────────────────────────
+  // ─── Tools Toggle Handler ──────────────────────────────────────────────────
 
-  pi.registerTool({
-    name: "copilot_plugins_install",
-    label: "Install Copilot Plugin",
-    description: "Install a GitHub Copilot plugin into Pi. Extracts MCP servers, skills, and agents from the Copilot plugin and registers them with Pi.",
-    promptSnippet: "Install a GitHub Copilot plugin into Pi",
-    promptGuidelines: [
-      "Use spec format: name@marketplace, owner/repo, owner/repo:path, git URL, or local path",
-      "Example: 'azure@awesome-copilot' or 'microsoft/work-iq'",
-      "Check what a Copilot plugin provides with copilot_plugins_browse first",
-    ],
-    parameters: InstallParams,
-    exposure: "direct",
-    namespace: COPILOT_PLUGINS_NAMESPACE,
-    annotations: INSTALL_ANNOTATIONS,
-    execute: async (toolCallId, params, signal, onUpdate, ctx) => {
-      return handleInstall(params.spec);
-    },
-  });
+  function handleToolsToggle(enabled: boolean): import("@earendil-works/pi-coding-agent").AgentToolResult {
+    setToolEnabled("copilot_plugins_tools_toggle", enabled);
+    reRegisterTools(enabled ? "direct" : "hidden");
+    return {
+      content: [{ type: "text", text: enabled ? "✓ Copilot tools enabled. All 14 tools are now available." : "✓ Copilot tools disabled. Tools hidden to save context." }],
+    };
+  }
 
-  // ─── List Tool ───────────────────────────────────────────────────────────
+  // ─── reRegisterTools ──────────────────────────────────────────────────────
 
-  pi.registerTool({
-    name: "copilot_plugins_list",
-    label: "List Copilot Plugins",
-    description: "List installed GitHub Copilot plugins with their status, MCP servers, and skills.",
-    promptSnippet: "List installed GitHub Copilot plugins",
-    promptGuidelines: [
-      "Use this to see what Copilot plugins are currently installed",
-      "Optionally filter by enabled state",
-    ],
-    parameters: ListParams,
-    exposure: "direct",
-    namespace: COPILOT_PLUGINS_NAMESPACE,
-    annotations: LIST_ANNOTATIONS,
-    execute: async (toolCallId, params, signal, onUpdate, ctx) => {
-      return handleList(params.enabled);
-    },
-  });
+  function reRegisterTools(exposure: "direct" | "hidden"): void {
+    registerToolWithExposure(pi, "copilot_plugins_browse", {
+      label: "Browse Copilot Plugins",
+      description: "Browse plugins in a GitHub Copilot plugin marketplace. Lists available Copilot plugins with their names, versions, and descriptions.",
+      promptSnippet: "Browse available GitHub Copilot plugins in a marketplace",
+      promptGuidelines: [
+        "Use this tool to discover what Copilot plugins are available before installing",
+        "Specify a marketplace name (default: 'copilot-plugins')",
+        "Optionally provide a search query to filter results",
+      ],
+      parameters: BrowseParams,
+      annotations: BROWSE_ANNOTATIONS,
+      execute: async (toolCallId, params, signal, onUpdate, ctx) => handleBrowse(params.marketplace, params.query),
+    }, exposure);
 
-  // ─── Uninstall Tool ──────────────────────────────────────────────────────
+    registerToolWithExposure(pi, "copilot_plugins_install", {
+      label: "Install Copilot Plugin",
+      description: "Install a GitHub Copilot plugin into Pi. Extracts MCP servers, skills, and agents from the Copilot plugin and registers them with Pi.",
+      promptSnippet: "Install a GitHub Copilot plugin into Pi",
+      promptGuidelines: [
+        "Use spec format: name@marketplace, owner/repo, owner/repo:path, git URL, or local path",
+        "Example: 'azure@awesome-copilot' or 'microsoft/work-iq'",
+        "Check what a Copilot plugin provides with copilot_plugins_browse first",
+      ],
+      parameters: InstallParams,
+      annotations: INSTALL_ANNOTATIONS,
+      execute: async (toolCallId, params, signal, onUpdate, ctx) => handleInstall(params.spec),
+    }, exposure);
 
-  pi.registerTool({
-    name: "copilot_plugins_uninstall",
-    label: "Uninstall Copilot Plugin",
-    description: "Uninstall a GitHub Copilot plugin from Pi. Removes MCP servers, skills, and agents installed by the Copilot plugin.",
-    promptSnippet: "Uninstall a GitHub Copilot plugin from Pi",
-    promptGuidelines: [
-      "Specify the exact plugin name",
-      "Use copilot_plugins_list to see installed Copilot plugin names",
-      "This is a destructive operation — MCP servers and skills will be removed",
-    ],
-    parameters: UninstallParams,
-    exposure: "direct",
-    namespace: COPILOT_PLUGINS_NAMESPACE,
-    annotations: UNINSTALL_ANNOTATIONS,
-    execute: async (toolCallId, params, signal, onUpdate, ctx) => {
-      return handleUninstall(params.name);
-    },
-  });
+    registerToolWithExposure(pi, "copilot_plugins_list", {
+      label: "List Copilot Plugins",
+      description: "List installed GitHub Copilot plugins with their status, MCP servers, and skills.",
+      promptSnippet: "List installed GitHub Copilot plugins",
+      promptGuidelines: [
+        "Use this to see what Copilot plugins are currently installed",
+        "Optionally filter by enabled state",
+      ],
+      parameters: ListParams,
+      annotations: LIST_ANNOTATIONS,
+      execute: async (toolCallId, params, signal, onUpdate, ctx) => handleList(params.enabled),
+    }, exposure);
 
-  // ─── Enable Tool ─────────────────────────────────────────────────────────
+    registerToolWithExposure(pi, "copilot_plugins_uninstall", {
+      label: "Uninstall Copilot Plugin",
+      description: "Uninstall a GitHub Copilot plugin from Pi. Removes MCP servers, skills, and agents installed by the Copilot plugin.",
+      promptSnippet: "Uninstall a GitHub Copilot plugin from Pi",
+      promptGuidelines: [
+        "Specify the exact plugin name",
+        "Use copilot_plugins_list to see installed Copilot plugin names",
+        "This is a destructive operation — MCP servers and skills will be removed",
+      ],
+      parameters: UninstallParams,
+      annotations: UNINSTALL_ANNOTATIONS,
+      execute: async (toolCallId, params, signal, onUpdate, ctx) => handleUninstall(params.name),
+    }, exposure);
 
-  pi.registerTool({
-    name: "copilot_plugins_enable",
-    label: "Enable Copilot Plugin",
-    description: "Enable a disabled GitHub Copilot plugin. Re-enables its MCP servers and skills.",
-    promptSnippet: "Enable a GitHub Copilot plugin",
-    promptGuidelines: [
-      "Use this to re-enable a previously disabled Copilot plugin",
-      "Use copilot_plugins_list to see disabled plugins",
-    ],
-    parameters: EnableParams,
-    exposure: "direct",
-    namespace: COPILOT_PLUGINS_NAMESPACE,
-    annotations: ENABLE_DISABLE_ANNOTATIONS,
-    execute: async (toolCallId, params, signal, onUpdate, ctx) => {
-      return handleEnable(params.name);
-    },
-  });
+    registerToolWithExposure(pi, "copilot_plugins_enable", {
+      label: "Enable Copilot Plugin",
+      description: "Enable a disabled GitHub Copilot plugin. Re-enables its MCP servers and skills.",
+      promptSnippet: "Enable a GitHub Copilot plugin",
+      promptGuidelines: [
+        "Use this to re-enable a previously disabled Copilot plugin",
+        "Use copilot_plugins_list to see disabled plugins",
+      ],
+      parameters: EnableParams,
+      annotations: ENABLE_DISABLE_ANNOTATIONS,
+      execute: async (toolCallId, params, signal, onUpdate, ctx) => handleEnable(params.name),
+    }, exposure);
 
-  // ─── Disable Tool ────────────────────────────────────────────────────────
+    registerToolWithExposure(pi, "copilot_plugins_disable", {
+      label: "Disable Copilot Plugin",
+      description: "Disable a GitHub Copilot plugin. Disables its MCP servers and skills without uninstalling.",
+      promptSnippet: "Disable a GitHub Copilot plugin",
+      promptGuidelines: [
+        "Use this to temporarily disable a Copilot plugin without uninstalling",
+        "Use copilot_plugins_list to see installed plugins",
+        "MCP servers and skills will be deactivated but not removed",
+      ],
+      parameters: DisableParams,
+      annotations: ENABLE_DISABLE_ANNOTATIONS,
+      execute: async (toolCallId, params, signal, onUpdate, ctx) => handleDisable(params.name),
+    }, exposure);
 
-  pi.registerTool({
-    name: "copilot_plugins_disable",
-    label: "Disable Copilot Plugin",
-    description: "Disable a GitHub Copilot plugin. Disables its MCP servers and skills without uninstalling.",
-    promptSnippet: "Disable a GitHub Copilot plugin",
-    promptGuidelines: [
-      "Use this to temporarily disable a Copilot plugin without uninstalling",
-      "Use copilot_plugins_list to see installed plugins",
-      "MCP servers and skills will be deactivated but not removed",
-    ],
-    parameters: DisableParams,
-    exposure: "direct",
-    namespace: COPILOT_PLUGINS_NAMESPACE,
-    annotations: ENABLE_DISABLE_ANNOTATIONS,
-    execute: async (toolCallId, params, signal, onUpdate, ctx) => {
-      return handleDisable(params.name);
-    },
-  });
+    registerToolWithExposure(pi, "copilot_plugins_update", {
+      label: "Update Copilot Plugin",
+      description: "Update a GitHub Copilot plugin to the latest version. Fetches the latest manifest and updates MCP servers, skills, and agents.",
+      promptSnippet: "Update a GitHub Copilot plugin to latest version",
+      promptGuidelines: [
+        "Specify the Copilot plugin name to update",
+        "Use copilot_plugins_list to see installed plugin names",
+        "Updates fetch the latest version from the source",
+      ],
+      parameters: UpdateParams,
+      annotations: INSTALL_ANNOTATIONS,
+      execute: async (toolCallId, params, signal, onUpdate, ctx) => handleUpdate(params.name),
+    }, exposure);
 
-  // ─── Update Tool ─────────────────────────────────────────────────────────
+    registerToolWithExposure(pi, "copilot_plugins_info", {
+      label: "Copilot Plugin Info",
+      description: "Show detailed information about an installed GitHub Copilot plugin including source, version, SHA, installed files, and components.",
+      promptSnippet: "Show detailed info about an installed GitHub Copilot plugin",
+      promptGuidelines: [
+        "Use this to see detailed information about an installed Copilot plugin",
+        "Shows source, version, commit SHA, installed MCP servers, skills, and agents",
+      ],
+      parameters: InfoParams,
+      annotations: LIST_ANNOTATIONS,
+      execute: async (toolCallId, params, signal, onUpdate, ctx) => handleInfo(params.name),
+    }, exposure);
 
-  pi.registerTool({
-    name: "copilot_plugins_update",
-    label: "Update Copilot Plugin",
-    description: "Update a GitHub Copilot plugin to the latest version. Fetches the latest manifest and updates MCP servers, skills, and agents.",
-    promptSnippet: "Update a GitHub Copilot plugin to latest version",
-    promptGuidelines: [
-      "Specify the Copilot plugin name to update",
-      "Use copilot_plugins_list to see installed plugin names",
-      "Updates fetch the latest version from the source",
-    ],
-    parameters: UpdateParams,
-    exposure: "direct",
-    namespace: COPILOT_PLUGINS_NAMESPACE,
-    annotations: INSTALL_ANNOTATIONS,
-    execute: async (toolCallId, params, signal, onUpdate, ctx) => {
-      return handleUpdate(params.name);
-    },
-  });
+    registerToolWithExposure(pi, "copilot_plugins_search", {
+      label: "Search Copilot Plugins",
+      description: "Search for GitHub Copilot plugins across all registered marketplaces. Returns matching Copilot plugins with names, descriptions, and source marketplaces.",
+      promptSnippet: "Search for Copilot plugins across marketplaces",
+      promptGuidelines: [
+        "Use this to find Copilot plugins by keyword",
+        "Searches all registered marketplaces by default",
+        "Optionally specify a marketplace to search within",
+      ],
+      parameters: SearchParams,
+      annotations: BROWSE_ANNOTATIONS,
+      execute: async (toolCallId, params, signal, onUpdate, ctx) => handleSearch(params.query, params.marketplace),
+    }, exposure);
 
-  // ─── Info Tool ───────────────────────────────────────────────────────────
+    registerToolWithExposure(pi, "copilot_plugins_peek", {
+      label: "Peek Copilot Plugin",
+      description: "Preview a GitHub Copilot plugin's manifest, MCP servers, skills, and agents without downloading. Useful to check what a plugin provides before installing.",
+      promptSnippet: "Preview a Copilot plugin's contents before installing",
+      promptGuidelines: [
+        "Use this to inspect a Copilot plugin before deciding to install it",
+        "Spec format: name@marketplace, owner/repo, owner/repo:path, git URL, or local path",
+        "Shows MCP servers, skills, and agents the plugin provides",
+        "If no installable components found, the plugin may only contain Copilot-specific extensions",
+      ],
+      parameters: PeekParams,
+      annotations: BROWSE_ANNOTATIONS,
+      execute: async (toolCallId, params, signal, onUpdate, ctx) => handlePeek(params.spec),
+    }, exposure);
 
-  pi.registerTool({
-    name: "copilot_plugins_info",
-    label: "Copilot Plugin Info",
-    description: "Show detailed information about an installed GitHub Copilot plugin including source, version, SHA, installed files, and components.",
-    promptSnippet: "Show detailed info about an installed GitHub Copilot plugin",
-    promptGuidelines: [
-      "Use this to see detailed information about an installed Copilot plugin",
-      "Shows source, version, commit SHA, installed MCP servers, skills, and agents",
-    ],
-    parameters: InfoParams,
-    exposure: "direct",
-    namespace: COPILOT_PLUGINS_NAMESPACE,
-    annotations: LIST_ANNOTATIONS,
-    execute: async (toolCallId, params, signal, onUpdate, ctx) => {
-      return handleInfo(params.name);
-    },
-  });
+    registerToolWithExposure(pi, "copilot_plugins_marketplace_add", {
+      label: "Add Copilot Marketplace",
+      description: "Register a GitHub Copilot plugin marketplace so plugins from it can be browsed, searched, and installed.",
+      promptSnippet: "Add a Copilot plugin marketplace",
+      promptGuidelines: [
+        "Use this to register a new marketplace before browsing or installing from it",
+        "Source format: owner/repo (e.g., 'github/awesome-copilot')",
+        "The marketplace's marketplace.json will be fetched and cached",
+      ],
+      parameters: MarketplaceAddParams,
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+      execute: async (toolCallId, params, signal, onUpdate, ctx) => handleMarketplaceAdd(params.source, params.name),
+    }, exposure);
 
-  // ─── Search Tool ─────────────────────────────────────────────────────────
+    registerToolWithExposure(pi, "copilot_plugins_marketplace_list", {
+      label: "List Copilot Marketplaces",
+      description: "List all registered GitHub Copilot plugin marketplaces with their names and sources.",
+      promptSnippet: "List registered Copilot plugin marketplaces",
+      promptGuidelines: [
+        "Use this to see which marketplaces are available",
+        "Marketplaces must be registered before plugins from them can be installed",
+      ],
+      parameters: MarketplaceListParams,
+      annotations: BROWSE_ANNOTATIONS,
+      execute: async (toolCallId, params, signal, onUpdate, ctx) => handleMarketplaceList(),
+    }, exposure);
 
-  pi.registerTool({
-    name: "copilot_plugins_search",
-    label: "Search Copilot Plugins",
-    description: "Search for GitHub Copilot plugins across all registered marketplaces. Returns matching Copilot plugins with names, descriptions, and source marketplaces.",
-    promptSnippet: "Search for GitHub Copilot plugins across marketplaces",
-    promptGuidelines: [
-      "Use this to find Copilot plugins by keyword",
-      "Searches all registered marketplaces by default",
-      "Optionally specify a marketplace to search within",
-    ],
-    parameters: SearchParams,
-    exposure: "direct",
-    namespace: COPILOT_PLUGINS_NAMESPACE,
-    annotations: BROWSE_ANNOTATIONS,
-    execute: async (toolCallId, params, signal, onUpdate, ctx) => {
-      return handleSearch(params.query, params.marketplace);
-    },
-  });
+    registerToolWithExposure(pi, "copilot_plugins_marketplace_refresh", {
+      label: "Refresh Copilot Marketplace",
+      description: "Force-refresh a GitHub Copilot plugin marketplace's cache. Fetches the latest marketplace.json from the source repository.",
+      promptSnippet: "Refresh a Copilot plugin marketplace cache",
+      promptGuidelines: [
+        "Use this to update marketplace data when plugins have been added or updated",
+        "Caches are automatically refreshed every 24 hours",
+        "Omit marketplace to refresh all registered marketplaces",
+      ],
+      parameters: MarketplaceRefreshParams,
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+      execute: async (toolCallId, params, signal, onUpdate, ctx) => handleMarketplaceRefresh(params.marketplace),
+    }, exposure);
 
-  // ─── Peek Tool ─────────────────────────────────────────────────────────────
-
-  pi.registerTool({
-    name: "copilot_plugins_peek",
-    label: "Peek Copilot Plugin",
-    description: "Preview a GitHub Copilot plugin's manifest, MCP servers, skills, and agents without downloading. Useful to check what a plugin provides before installing.",
-    promptSnippet: "Preview a Copilot plugin's contents before installing",
-    promptGuidelines: [
-      "Use this to inspect a Copilot plugin before deciding to install it",
-      "Spec format: name@marketplace, owner/repo, owner/repo:path, git URL, or local path",
-      "Shows MCP servers, skills, and agents the plugin provides",
-      "If no installable components found, the plugin may only contain Copilot-specific extensions",
-    ],
-    parameters: PeekParams,
-    exposure: "direct",
-    namespace: COPILOT_PLUGINS_NAMESPACE,
-    annotations: BROWSE_ANNOTATIONS,
-    execute: async (toolCallId, params, signal, onUpdate, ctx) => {
-      return handlePeek(params.spec);
-    },
-  });
-
-  // ─── Marketplace Add Tool ──────────────────────────────────────────────────
-
-  pi.registerTool({
-    name: "copilot_plugins_marketplace_add",
-    label: "Add Copilot Marketplace",
-    description: "Register a GitHub Copilot plugin marketplace so plugins from it can be browsed, searched, and installed.",
-    promptSnippet: "Add a Copilot plugin marketplace",
-    promptGuidelines: [
-      "Use this to register a new marketplace before browsing or installing from it",
-      "Source format: owner/repo (e.g., 'github/awesome-copilot')",
-      "The marketplace's marketplace.json will be fetched and cached",
-    ],
-    parameters: MarketplaceAddParams,
-    exposure: "direct",
-    namespace: COPILOT_PLUGINS_NAMESPACE,
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-    execute: async (toolCallId, params, signal, onUpdate, ctx) => {
-      return handleMarketplaceAdd(params.source, params.name);
-    },
-  });
-
-  // ─── Marketplace List Tool ─────────────────────────────────────────────────
-
-  pi.registerTool({
-    name: "copilot_plugins_marketplace_list",
-    label: "List Copilot Marketplaces",
-    description: "List all registered GitHub Copilot plugin marketplaces with their names and sources.",
-    promptSnippet: "List registered Copilot plugin marketplaces",
-    promptGuidelines: [
-      "Use this to see which marketplaces are available",
-      "Marketplaces must be registered before plugins from them can be installed",
-    ],
-    parameters: MarketplaceListParams,
-    exposure: "direct",
-    namespace: COPILOT_PLUGINS_NAMESPACE,
-    annotations: BROWSE_ANNOTATIONS,
-    execute: async (toolCallId, params, signal, onUpdate, ctx) => {
-      return handleMarketplaceList();
-    },
-  });
-
-  // ─── Marketplace Refresh Tool ──────────────────────────────────────────────
-
-  pi.registerTool({
-    name: "copilot_plugins_marketplace_refresh",
-    label: "Refresh Copilot Marketplace",
-    description: "Force-refresh a GitHub Copilot plugin marketplace's cache. Fetches the latest marketplace.json from the source repository.",
-    promptSnippet: "Refresh a Copilot plugin marketplace cache",
-    promptGuidelines: [
-      "Use this to update marketplace data when plugins have been added or updated",
-      "Caches are automatically refreshed every 24 hours",
-      "Omit marketplace to refresh all registered marketplaces",
-    ],
-    parameters: MarketplaceRefreshParams,
-    exposure: "direct",
-    namespace: COPILOT_PLUGINS_NAMESPACE,
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
-    execute: async (toolCallId, params, signal, onUpdate, ctx) => {
-      return handleMarketplaceRefresh(params.marketplace);
-    },
-  });
-
-  // ─── Marketplace Remove Tool ───────────────────────────────────────────────
-
-  pi.registerTool({
-    name: "copilot_plugins_marketplace_remove",
-    label: "Remove Copilot Marketplace",
-    description: "Remove a registered GitHub Copilot plugin marketplace. Plugins from this marketplace will no longer be searchable or installable.",
-    promptSnippet: "Remove a Copilot plugin marketplace",
-    promptGuidelines: [
-      "Use this to remove a marketplace that is no longer needed",
-      "Plugins installed from this marketplace remain installed",
-      "Cannot remove a marketplace if plugins are still installed from it",
-    ],
-    parameters: MarketplaceRemoveParams,
-    exposure: "direct",
-    namespace: COPILOT_PLUGINS_NAMESPACE,
-    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
-    execute: async (toolCallId, params, signal, onUpdate, ctx) => {
-      return handleMarketplaceRemove(params.name);
-    },
-  });
+    registerToolWithExposure(pi, "copilot_plugins_marketplace_remove", {
+      label: "Remove Copilot Marketplace",
+      description: "Remove a registered GitHub Copilot plugin marketplace. Plugins from this marketplace will no longer be searchable or installable.",
+      promptSnippet: "Remove a Copilot plugin marketplace",
+      promptGuidelines: [
+        "Use this to remove a marketplace that is no longer needed",
+        "Plugins installed from this marketplace remain installed",
+        "Cannot remove a marketplace if plugins are still installed from it",
+      ],
+      parameters: MarketplaceRemoveParams,
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
+      execute: async (toolCallId, params, signal, onUpdate, ctx) => handleMarketplaceRemove(params.name),
+    }, exposure);
+  }
 }
 
 // ─── Slash Command Handler ──────────────────────────────────────────────────
@@ -581,6 +551,41 @@ async function handleSlashCommand(args: string[], ctx: ExtensionCommandContext):
         }
         const result = await handlePeek(rest[0]);
         ui.notify(result.content[0].type === "text" ? result.content[0].text : "", "info");
+        break;
+      }
+      case "tools": {
+        if (!rest.length) {
+          // Show current tool state
+          const state = getToolState();
+          const enabled = Object.entries(state).filter(([, v]) => v);
+          const disabled = Object.entries(state).filter(([, v]) => !v);
+          let output = "Copilot tools status:\n\n";
+          if (enabled.length) {
+            output += "Enabled:\n";
+            for (const [name] of enabled) {
+              output += `  ✓ ${name}\n`;
+            }
+            output += "\n";
+          }
+          if (disabled.length) {
+            output += "Disabled:\n";
+            for (const [name] of disabled) {
+              output += `  ✗ ${name}\n`;
+            }
+          }
+          ui.notify(output.trim(), "info");
+          return;
+        }
+        const sub = rest[0];
+        if (sub === "enable") {
+          handleToolsToggle(true);
+          ui.notify("✓ Copilot tools enabled.", "success");
+        } else if (sub === "disable") {
+          handleToolsToggle(false);
+          ui.notify("✓ Copilot tools disabled.", "success");
+        } else {
+          ui.notify("Usage: /copilot-plugins tools [enable|disable]\nRun /copilot-plugins tools (no args) to see current status.", "error");
+        }
         break;
       }
       case "marketplace": {

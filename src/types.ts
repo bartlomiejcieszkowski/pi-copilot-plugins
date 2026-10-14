@@ -1,6 +1,6 @@
 // ─── Plugin Manifest Types ───────────────────────────────────────────────────
 
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 
 /** Agent Plugins 1.0 / 1.1 manifest */
 export interface AgentPluginsManifest {
@@ -156,6 +156,83 @@ export interface PluginRegistry {
 /** Plugin configuration (secrets, preferences) */
 export interface PluginConfig {
   githubToken?: string;
+  tools?: Record<string, boolean>;
+}
+
+/** Built-in tool names */
+export const TOOL_NAMES = [
+  "copilot_plugins_browse",
+  "copilot_plugins_install",
+  "copilot_plugins_list",
+  "copilot_plugins_uninstall",
+  "copilot_plugins_enable",
+  "copilot_plugins_disable",
+  "copilot_plugins_update",
+  "copilot_plugins_info",
+  "copilot_plugins_search",
+  "copilot_plugins_peek",
+  "copilot_plugins_marketplace_add",
+  "copilot_plugins_marketplace_list",
+  "copilot_plugins_marketplace_refresh",
+  "copilot_plugins_marketplace_remove",
+] as const;
+
+export type ToolName = typeof TOOL_NAMES[number];
+
+/**
+ * Get the default tool state (all disabled).
+ */
+export function getDefaultToolState(): Record<string, boolean> {
+  const state: Record<string, boolean> = {};
+  for (const name of TOOL_NAMES) {
+    state[name] = false;
+  }
+  return state;
+}
+
+/**
+ * Get tool enabled state from config, falling back to defaults.
+ */
+export function getToolState(): Record<string, boolean> {
+  try {
+    const registry = readFileSync(COPILOT_PLUGINS_JSON, "utf-8");
+    const parsed = JSON.parse(registry) as PluginRegistry;
+    if (parsed.config?.tools) {
+      // Merge with defaults so any missing tools use default (disabled)
+      const merged: Record<string, boolean> = { ...getDefaultToolState() };
+      for (const name of TOOL_NAMES) {
+        if (parsed.config!.tools![name] !== undefined) {
+          merged[name] = parsed.config!.tools![name]!;
+        }
+      }
+      return merged;
+    }
+  } catch {
+    // Config file doesn't exist or is invalid — fall through to defaults
+  }
+  return getDefaultToolState();
+}
+
+/**
+ * Enable or disable a tool in the config.
+ */
+export function setToolEnabled(name: string, enabled: boolean): void {
+  try {
+    const registry = readFileSync(COPILOT_PLUGINS_JSON, "utf-8");
+    const parsed = JSON.parse(registry) as PluginRegistry;
+    if (!parsed.config) parsed.config = {};
+    if (!parsed.config.tools) parsed.config.tools = {};
+    parsed.config.tools[name] = enabled;
+    writeFileSync(COPILOT_PLUGINS_JSON, JSON.stringify(parsed, null, 2));
+  } catch {
+    // If we can't read the file, try to write a new one
+    const parsed: PluginRegistry = {
+      marketplaces: {},
+      plugins: {},
+      config: { tools: { [name]: enabled } },
+    };
+    writeFileSync(COPILOT_PLUGINS_JSON, JSON.stringify(parsed, null, 2));
+  }
 }
 
 /**
