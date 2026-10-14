@@ -56,6 +56,16 @@ Once installed, restart Pi and use:
 - `/copilot-plugins` — slash command to show installed count and usage
 - Tools: `copilot_plugins_browse`, `copilot_plugins_install`, `copilot_plugins_list`, `copilot_plugins_uninstall`, `copilot_plugins_enable`, `copilot_plugins_disable`, `copilot_plugins_update`, `copilot_plugins_info`, `copilot_plugins_search`
 
+### Development
+
+To test the extension without installing it permanently, use `pi -e` to load it directly:
+
+```bash
+pi -e ./pi-copilot-plugins
+```
+
+This loads the extension for the current session only — changes to the source are picked up after a Pi reload.
+
 ## CLI Commands
 
 ### Plugin Management
