@@ -6,11 +6,12 @@ import type {
   InstallResult,
   UninstallResult,
 } from "./types.js";
+import { getMarketplace } from "./registry.js";
+import { findPluginInMarketplace, marketplacePluginToSpec } from "./marketplace.js";
 import {
   PLUGIN_CACHE_DIR,
   PLUGIN_DATA_DIR,
   resolvePaths,
-  MCP_JSON,
   SKILLS_DIR,
   AGENTS_SKILLS_DIR,
   getGitHubToken,
@@ -18,11 +19,9 @@ import {
 import {
   extractPluginComponents,
   convertMcpServers,
-  expandPluginPlaceholders,
 } from "./converter.js";
 import {
   installPlugin,
-  unregisterMarketplace,
   readRegistry,
   writeRegistry,
   getServerOwner,
@@ -30,8 +29,7 @@ import {
 } from "./registry.js";
 import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
-import { status, statusDone, statusWarn, statusError, statusSimple, stopSpinner } from "./progress.js";
-import { createBackup, createBackups } from "./backup.js";
+import { status, statusDone, statusSimple, stopSpinner } from "./progress.js";
 import { tmpdir } from "node:os";
 import {
   readFileSync,
@@ -145,7 +143,7 @@ export async function peekManifest(spec: PluginSpec): Promise<PluginManifest | n
  */
 function createLegacyManifestFromContent(
   repo: string,
-  subPath: string | undefined,
+  _subPath: string | undefined,
   config: Record<string, unknown>
 ): PluginManifest {
   return {
@@ -392,8 +390,30 @@ export async function installPluginPackage(
   };
 
   try {
+    // Resolve marketplace installs before downloading
+    if (spec.source.type === "marketplace") {
+      const marketplaceName = spec.source.marketplace;
+      const marketplace = getMarketplace(marketplaceName);
+      if (!marketplace) {
+        throw new Error(
+          `Marketplace "${marketplaceName}" not found. Register it with: pi-copilot-plugins marketplace add <source>`
+        );
+      }
+
+      const plugin = await findPluginInMarketplace(marketplace.source, spec.name);
+      if (!plugin.plugin) {
+        throw new Error(
+          `Plugin "${spec.name}" not found in marketplace "${marketplaceName}". Use "pi-copilot-plugins marketplace browse ${marketplaceName}" to see available plugins.`
+        );
+      }
+
+      const resolvedSpec = marketplacePluginToSpec(plugin.plugin, marketplaceName);
+      spec.name = resolvedSpec.name;
+      spec.source = resolvedSpec.source;
+    }
+
     // Step 1: Download the plugin
-    const { cacheDir, manifest, sha, subPath } = await downloadPlugin(spec);
+    const { cacheDir, manifest, sha } = await downloadPlugin(spec);
     if (verbose) {
       console.log(`  Cache directory: ${cacheDir}`);
       if (sha) console.log(`  Commit SHA: ${sha}`);
