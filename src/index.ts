@@ -111,11 +111,11 @@ export default function (pi: ExtensionAPI): void {
 
   pi.registerTool({
     name: "copilot_plugins_browse",
-    label: "Browse Plugins",
-    description: "Browse plugins in a Copilot plugin marketplace. Lists available plugins with their names, versions, and descriptions.",
-    promptSnippet: "Browse available Copilot plugins in a marketplace",
+    label: "Browse Copilot Plugins",
+    description: "Browse plugins in a GitHub Copilot plugin marketplace. Lists available Copilot plugins with their names, versions, and descriptions.",
+    promptSnippet: "Browse available GitHub Copilot plugins in a marketplace",
     promptGuidelines: [
-      "Use this tool to discover what plugins are available before installing",
+      "Use this tool to discover what Copilot plugins are available before installing",
       "Specify a marketplace name (default: 'copilot-plugins')",
       "Optionally provide a search query to filter results",
     ],
@@ -132,13 +132,13 @@ export default function (pi: ExtensionAPI): void {
 
   pi.registerTool({
     name: "copilot_plugins_install",
-    label: "Install Plugin",
-    description: "Install a GitHub Copilot plugin into Pi. Extracts MCP servers, skills, and agents from the plugin and registers them with Pi.",
-    promptSnippet: "Install a Copilot plugin into Pi",
+    label: "Install Copilot Plugin",
+    description: "Install a GitHub Copilot plugin into Pi. Extracts MCP servers, skills, and agents from the Copilot plugin and registers them with Pi.",
+    promptSnippet: "Install a GitHub Copilot plugin into Pi",
     promptGuidelines: [
       "Use spec format: name@marketplace, owner/repo, owner/repo:path, git URL, or local path",
       "Example: 'azure@awesome-copilot' or 'microsoft/work-iq'",
-      "Check what a plugin provides with copilot_plugins_browse first",
+      "Check what a Copilot plugin provides with copilot_plugins_browse first",
     ],
     parameters: InstallParams,
     exposure: "direct",
@@ -153,11 +153,11 @@ export default function (pi: ExtensionAPI): void {
 
   pi.registerTool({
     name: "copilot_plugins_list",
-    label: "List Plugins",
-    description: "List installed Copilot plugins with their status, MCP servers, and skills.",
-    promptSnippet: "List installed Copilot plugins",
+    label: "List Copilot Plugins",
+    description: "List installed GitHub Copilot plugins with their status, MCP servers, and skills.",
+    promptSnippet: "List installed GitHub Copilot plugins",
     promptGuidelines: [
-      "Use this to see what plugins are currently installed",
+      "Use this to see what Copilot plugins are currently installed",
       "Optionally filter by enabled state",
     ],
     parameters: ListParams,
@@ -173,12 +173,12 @@ export default function (pi: ExtensionAPI): void {
 
   pi.registerTool({
     name: "copilot_plugins_uninstall",
-    label: "Uninstall Plugin",
-    description: "Uninstall a Copilot plugin from Pi. Removes MCP servers, skills, and agents installed by the plugin.",
-    promptSnippet: "Uninstall a Copilot plugin from Pi",
+    label: "Uninstall Copilot Plugin",
+    description: "Uninstall a GitHub Copilot plugin from Pi. Removes MCP servers, skills, and agents installed by the Copilot plugin.",
+    promptSnippet: "Uninstall a GitHub Copilot plugin from Pi",
     promptGuidelines: [
       "Specify the exact plugin name",
-      "Use copilot_plugins_list to see installed plugin names",
+      "Use copilot_plugins_list to see installed Copilot plugin names",
       "This is a destructive operation — MCP servers and skills will be removed",
     ],
     parameters: UninstallParams,
@@ -194,11 +194,11 @@ export default function (pi: ExtensionAPI): void {
 
   pi.registerTool({
     name: "copilot_plugins_enable",
-    label: "Enable Plugin",
-    description: "Enable a disabled Copilot plugin. Re-enables its MCP servers and skills.",
-    promptSnippet: "Enable a Copilot plugin",
+    label: "Enable Copilot Plugin",
+    description: "Enable a disabled GitHub Copilot plugin. Re-enables its MCP servers and skills.",
+    promptSnippet: "Enable a GitHub Copilot plugin",
     promptGuidelines: [
-      "Use this to re-enable a previously disabled plugin",
+      "Use this to re-enable a previously disabled Copilot plugin",
       "Use copilot_plugins_list to see disabled plugins",
     ],
     parameters: EnableParams,
@@ -214,11 +214,11 @@ export default function (pi: ExtensionAPI): void {
 
   pi.registerTool({
     name: "copilot_plugins_disable",
-    label: "Disable Plugin",
-    description: "Disable a Copilot plugin. Disables its MCP servers and skills without uninstalling.",
-    promptSnippet: "Disable a Copilot plugin",
+    label: "Disable Copilot Plugin",
+    description: "Disable a GitHub Copilot plugin. Disables its MCP servers and skills without uninstalling.",
+    promptSnippet: "Disable a GitHub Copilot plugin",
     promptGuidelines: [
-      "Use this to temporarily disable a plugin without uninstalling",
+      "Use this to temporarily disable a Copilot plugin without uninstalling",
       "Use copilot_plugins_list to see installed plugins",
       "MCP servers and skills will be deactivated but not removed",
     ],
@@ -235,11 +235,11 @@ export default function (pi: ExtensionAPI): void {
 
   pi.registerTool({
     name: "copilot_plugins_update",
-    label: "Update Plugin",
-    description: "Update a Copilot plugin to the latest version. Fetches the latest manifest and updates MCP servers, skills, and agents.",
-    promptSnippet: "Update a Copilot plugin to latest version",
+    label: "Update Copilot Plugin",
+    description: "Update a GitHub Copilot plugin to the latest version. Fetches the latest manifest and updates MCP servers, skills, and agents.",
+    promptSnippet: "Update a GitHub Copilot plugin to latest version",
     promptGuidelines: [
-      "Specify the plugin name to update",
+      "Specify the Copilot plugin name to update",
       "Use copilot_plugins_list to see installed plugin names",
       "Updates fetch the latest version from the source",
     ],
@@ -256,11 +256,11 @@ export default function (pi: ExtensionAPI): void {
 
   pi.registerTool({
     name: "copilot_plugins_info",
-    label: "Plugin Info",
-    description: "Show detailed information about an installed plugin including source, version, SHA, installed files, and components.",
-    promptSnippet: "Show detailed info about an installed plugin",
+    label: "Copilot Plugin Info",
+    description: "Show detailed information about an installed GitHub Copilot plugin including source, version, SHA, installed files, and components.",
+    promptSnippet: "Show detailed info about an installed GitHub Copilot plugin",
     promptGuidelines: [
-      "Use this to see detailed information about an installed plugin",
+      "Use this to see detailed information about an installed Copilot plugin",
       "Shows source, version, commit SHA, installed MCP servers, skills, and agents",
     ],
     parameters: InfoParams,
@@ -276,11 +276,11 @@ export default function (pi: ExtensionAPI): void {
 
   pi.registerTool({
     name: "copilot_plugins_search",
-    label: "Search Plugins",
-    description: "Search for Copilot plugins across all registered marketplaces. Returns matching plugins with names, descriptions, and source marketplaces.",
-    promptSnippet: "Search for Copilot plugins across marketplaces",
+    label: "Search Copilot Plugins",
+    description: "Search for GitHub Copilot plugins across all registered marketplaces. Returns matching Copilot plugins with names, descriptions, and source marketplaces.",
+    promptSnippet: "Search for GitHub Copilot plugins across marketplaces",
     promptGuidelines: [
-      "Use this to find plugins by keyword",
+      "Use this to find Copilot plugins by keyword",
       "Searches all registered marketplaces by default",
       "Optionally specify a marketplace to search within",
     ],
