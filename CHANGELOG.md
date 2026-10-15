@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] — 2026-10-15
+
+### Added
+- `reinstall` command — uninstalls then reinstalls a plugin to restore original files
+- `lastVersion` tracking in registry — shows version change on update
+- Release notes on update — displays previous version → new version with SHA
+- Copy entire skill directory on install (not just `SKILL.md`) — uses `copyDir()`
+- Read VERSION from package.json dynamically (not hardcoded)
+- Reinstall support in slash command handler
+
+### Fixed
+- MCP servers now written under `mcpServers` wrapper key (Pi's expected format)
+- Bare plugin names now search all registered marketplaces, not just the default
+- Marketplace browse slash command correctly destructures `{ plugins, stale }` return value
+- Marketplace installs resolved inside `installPluginPackage` before download
+
 ## [0.3.1] — 2026-10-15
 
 ### Fixed
