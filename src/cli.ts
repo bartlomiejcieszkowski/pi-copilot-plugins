@@ -1,10 +1,24 @@
 #!/usr/bin/env node
 
+import { readFileSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Read version from package.json
+let VERSION = "0.0.0";
+try {
+  const pkg = JSON.parse(readFileSync(join(__dirname, "..", "package.json"), "utf-8"));
+  VERSION = pkg.version || "0.0.0";
+} catch {
+  // Use default if package.json can't be read
+}
+
 import { cmdInstall, cmdUninstall, cmdReinstall, cmdList, cmdUpdate, cmdEnable, cmdDisable, cmdMarketplaceAdd, cmdMarketplaceList, cmdMarketplaceBrowse, cmdMarketplaceRefresh, cmdMarketplaceRemove, cmdSearch, cmdPeek, parseSpec } from "./commands.js";
 import { bold, cyan, gray, red } from "./colors.js";
 import { formatError } from "./errors.js";
-
-const VERSION = "0.1.0";
 
 function printUsage(): void {
   console.log(`
