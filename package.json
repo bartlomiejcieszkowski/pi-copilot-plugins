@@ -21,14 +21,17 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "typebox": "^1.3.37",
     "undici": "^7.0.0"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": ">=1.0.0"
+    "@earendil-works/pi-coding-agent": ">=1.0.0",
+    "typebox": "*"
   },
   "peerDependenciesMeta": {
     "@earendil-works/pi-coding-agent": {
+      "optional": true
+    },
+    "typebox": {
       "optional": true
     }
   },
