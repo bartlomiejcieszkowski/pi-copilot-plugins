@@ -64,16 +64,24 @@ export function installPlugin(
   agents?: string[],
   scope: "user" | "project" = "user",
   cacheDir?: string,
-  sha?: string
+  sha?: string,
+  lastVersion?: string
 ): RegistryPlugin {
   const registry = readRegistry();
+
+  // If plugin already exists, save its current version as lastVersion
+  const existing = registry.plugins[name];
+  if (existing && !lastVersion && existing.version) {
+    lastVersion = existing.version;
+  }
 
   const plugin: RegistryPlugin = {
     name,
     version,
     sha,
+    lastVersion,
     enabled: true,
-    installedAt: new Date().toISOString(),
+    installedAt: existing?.installedAt || new Date().toISOString(),
     source,
     scope,
     cacheDir,

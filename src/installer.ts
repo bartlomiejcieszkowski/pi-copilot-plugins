@@ -31,6 +31,7 @@ import {
 import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
 import { status, statusDone, statusSimple, stopSpinner } from "./progress.js";
+import { bold, cyan, gray } from "./colors.js";
 import { tmpdir } from "node:os";
 import {
   readFileSync,
@@ -1039,12 +1040,13 @@ export async function updatePluginPackage(
     }
 
     // Update registry entry with new version/SHA
+    const manifestVersion = "version" in downloadResult.manifest && downloadResult.manifest.version ? downloadResult.manifest.version : undefined;
     if (!dryRun) {
-      const manifestVersion = "version" in downloadResult.manifest && downloadResult.manifest.version ? downloadResult.manifest.version : undefined;
       registry.plugins[name] = {
         ...plugin,
         version: manifestVersion || plugin.version,
         sha: downloadResult.sha || plugin.sha,
+        lastVersion: plugin.version, // Save current version as lastVersion for release notes
         components: {
           mcpServers: Object.keys(components.mcpServers),
           skills: components.skills.map(s => s.name),
@@ -1055,6 +1057,18 @@ export async function updatePluginPackage(
       };
       writeRegistry(registry);
       if (verbose) console.log(`  Updated registry entry`);
+    }
+
+    // Show release notes if version changed
+    if (!dryRun && manifestVersion && plugin.version && manifestVersion !== plugin.version) {
+      console.log(`
+  ${bold("Release Notes")}:`);
+      console.log(`  ${cyan("Previous version")}: ${plugin.version}${plugin.sha ? ` (${plugin.sha.slice(0, 8)})` : ""}`);
+      console.log(`  ${cyan("New version")}: ${manifestVersion}${downloadResult.sha ? ` (${downloadResult.sha.slice(0, 8)})` : ""}`);
+      if (plugin.version && manifestVersion) {
+        console.log(`  ${gray("Change")}: ${plugin.version} → ${manifestVersion}`);
+      }
+      console.log();
     }
 
     result.success = true;

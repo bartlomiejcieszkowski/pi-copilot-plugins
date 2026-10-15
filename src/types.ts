@@ -260,6 +260,7 @@ export interface RegistryPlugin {
   name: string;
   version?: string;
   sha?: string;
+  lastVersion?: string; // version before last install (for release notes)
   enabled: boolean;
   installedAt: string;
   source: PluginSource;
