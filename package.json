@@ -21,7 +21,7 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "undici": "^7.0.0"
+    "undici": "^8.11.2"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": ">=1.0.0",
