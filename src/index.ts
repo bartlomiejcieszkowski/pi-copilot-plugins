@@ -5,7 +5,7 @@ import { Type } from "typebox";
 
 import type { PluginSpec } from "./types.js";
 import { registerDefaultMarketplace, listMarketplacePlugins, findPluginInMarketplace, searchMarketplacePlugins, marketplacePluginToSpec, fetchMarketplace } from "./marketplace.js";
-import { installPluginPackage, uninstallPluginPackage, updatePluginPackage, peekManifest, peekSkills } from "./installer.js";
+import { installPluginPackage, uninstallPluginPackage, reinstallPluginPackage, updatePluginPackage, peekManifest, peekSkills } from "./installer.js";
 import { listPlugins, enablePlugin, disablePlugin, getMarketplace, getPlugin, uninstallPlugin, registerMarketplace, unregisterMarketplace, listMarketplaces } from "./registry.js";
 import { getToolState, setToolEnabled, TOOL_NAMES } from "./types.js";
 
@@ -459,6 +459,19 @@ async function handleSlashCommand(args: string, ctx: ExtensionCommandContext): P
           ui.notify(`✓ Uninstalled "${rest[0]}"`, "success");
         } else {
           ui.notify(`✗ Failed: ${result.errors?.join(", ") || "not found"}`, "error");
+        }
+        break;
+      }
+      case "reinstall": {
+        if (!rest.length) {
+          ui.notify("Usage: /copilot-plugins reinstall <name>", "error");
+          return;
+        }
+        const result = await reinstallPluginPackage(rest[0]);
+        if (result.success) {
+          ui.notify(`✓ Reinstalled "${result.pluginName}"`, "success");
+        } else {
+          ui.notify(`✗ Failed: ${result.errors?.join(", ") || "unknown error"}`, "error");
         }
         break;
       }
