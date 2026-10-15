@@ -1,7 +1,8 @@
 {
   "name": "pi-copilot-plugins",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Install GitHub Copilot plugins into Pi — extract MCP servers, skills, and agents",
+  "keywords": ["pi-package", "pi", "pi-coding-agent", "extension", "copilot", "plugin", "marketplace", "copilot-plugins", "pi-copilot-plugins"],
   "type": "module",
   "engines": {
     "node": ">=22"
@@ -53,7 +54,6 @@
     "url": "https://github.com/bartlomiejcieszkowski/pi-copilot-plugins.git"
   },
   "homepage": "https://github.com/bartlomiejcieszkowski/pi-copilot-plugins",
-  "keywords": ["pi-package", "pi", "pi-coding-agent", "extension", "copilot", "plugin", "marketplace", "copilot-plugins", "pi-copilot-plugins"],
   "author": "Bartlomiej Cieszkowski <bartlomiej.cieszkowski@gmail.com>",
   "license": "MIT",
   "pi": {

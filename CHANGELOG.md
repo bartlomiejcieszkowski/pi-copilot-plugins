@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] — 2026-10-15
+
+### Changed
+- Updated `undici` from ^7.0.0 to ^8.11.2
+- Updated `vitest` from ^3.0.0 to ^5.0.4
+- Updated `@vitest/coverage-v8` from ^3.0.0 to ^5.0.4
+- Updated `typescript` from 5.9.3 to 7.0.2 (semver-major)
+- Updated `@types/node` from 22.20.5 to 26.6.5 (semver-major)
+- Updated `actions/checkout` from 4 to 7
+- Updated `actions/setup-node` from 4 to 7
+- Require Node 22+ (aligns with Pi's own Node requirement)
+- Removed Node 20.x from CI test matrix
+- Release workflow updated to use OIDC instead of NPM_TOKEN secret
+- Release workflow triggers on push tags v* instead of GitHub release published
+
+### Added
+- `engines.node >= 22` in package.json
+
 ## [0.4.0] — 2026-10-15
 
 ### Added
