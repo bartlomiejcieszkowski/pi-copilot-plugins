@@ -41,6 +41,8 @@ import {
   mkdtempSync,
   renameSync,
   readdirSync,
+  copyFileSync,
+  statSync,
 } from "node:fs";
 import { join, dirname } from "node:path";
 import { fetch } from "undici";
@@ -51,6 +53,23 @@ import { fetch } from "undici";
 function ensureDir(path: string): void {
   if (!existsSync(path)) {
     mkdirSync(path, { recursive: true });
+  }
+}
+
+/**
+ * Recursively copy a directory from source to destination.
+ */
+function copyDir(src: string, dest: string): void {
+  mkdirSync(dest, { recursive: true });
+  const entries = readdirSync(src, { withFileTypes: true });
+  for (const entry of entries) {
+    const srcPath = join(src, entry.name);
+    const destPath = join(dest, entry.name);
+    if (entry.isDirectory()) {
+      copyDir(srcPath, destPath);
+    } else {
+      copyFileSync(srcPath, destPath);
+    }
   }
 }
 
@@ -559,6 +578,78 @@ export async function installPluginPackage(
   return result;
 }
 
+// ─── Plugin Reinstallation ──────────────────────────────────────────────────
+
+/**
+ * Reinstall a plugin: uninstall then reinstall to refresh all components.
+ * Useful when a user has modified skill files and wants to restore originals.
+ */
+export async function reinstallPluginPackage(
+  name: string,
+  local = false,
+  verbose = false,
+  dryRun = false,
+  yes = false,
+  outputDir?: string,
+  backup = false
+): Promise<InstallResult> {
+  const result: InstallResult = {
+    success: false,
+    pluginName: name,
+    mcpServers: [],
+    skills: [],
+    agents: [],
+  };
+
+  try {
+    const registry = readRegistry();
+    const plugin = registry.plugins[name];
+
+    if (!plugin) {
+      throw new Error(`Plugin "${name}" is not installed`);
+    }
+
+    const scope: "user" | "project" = plugin.scope || "user";
+
+    if (local && scope !== "project") {
+      throw new Error(`Plugin "${name}" is installed at user level, not project level. Use without --local.`);
+    }
+    if (!local && scope === "project") {
+      throw new Error(`Plugin "${name}" is installed at project level. Use --local to reinstall.`);
+    }
+
+    if (verbose) {
+      console.log(`  Reinstalling plugin: ${name}`);
+      console.log(`  Source: ${JSON.stringify(plugin.source)}`);
+    }
+
+    // Uninstall first (removes MCP servers, skills, agents, cache)
+    if (!dryRun) {
+      uninstallPluginPackage(name, local, verbose, true, yes, outputDir, backup);
+      if (verbose) console.log(`  Uninstalled plugin`);
+    }
+
+    // Now reinstall from scratch
+    const pluginSpec: PluginSpec = { name, source: plugin.source };
+    const reinstallResult = await installPluginPackage(
+      pluginSpec,
+      local,
+      verbose,
+      dryRun,
+      yes,
+      outputDir,
+      backup
+    );
+
+    return reinstallResult;
+  } catch (err: any) {
+    result.success = false;
+    result.errors = [err.message];
+  }
+
+  return result;
+}
+
 /**
  * Write MCP servers to Pi's mcp.json using atomic merge.
  */
@@ -625,17 +716,16 @@ async function copySkill(
   const scope: "user" | "project" = local ? "project" : "user";
   const { skillsDir } = resolvePaths(scope);
   const destDir = join(skillsDir, skill.name);
-  const destPath = join(destDir, "SKILL.md");
 
-  if (existsSync(destPath)) {
+  if (existsSync(destDir)) {
     throw new Error(`Skill ${skill.name} already exists`);
   }
 
   mkdirSync(destDir, { recursive: true });
 
-  const sourcePath = join(pluginRoot, skill.skillMdPath);
-  const content = readFileSync(sourcePath, "utf-8");
-  writeFileSync(destPath, content, "utf-8");
+  // Copy entire skill directory, not just SKILL.md
+  const sourceDir = join(pluginRoot, skill.skillMdPath);
+  copyDir(sourceDir, destDir);
 }
 
 /**
@@ -702,7 +792,7 @@ export function uninstallPluginPackage(name: string, local = false, verbose = fa
     // Remove MCP servers from mcp.json
     const { mcpJson: mcpJsonPath } = resolvePaths(scope);
     if (verbose) console.log(`  MCP config path: ${mcpJsonPath}`);
-    let mcpConfig: Record<string, any> = {};
+    let mcpConfig: Record<string, unknown> = {};
 
     if (existsSync(mcpJsonPath)) {
       try {
@@ -723,7 +813,7 @@ export function uninstallPluginPackage(name: string, local = false, verbose = fa
       const owner = getServerOwner(serverName);
       if (owner === name) {
         if (!dryRun) {
-          delete mcpConfig.mcpServers[serverName];
+          delete (mcpConfig.mcpServers as Record<string, unknown>)[serverName];
         }
         result.removedMcpServers.push(serverName);
         if (verbose) console.log(`  ${dryRun ? "Would remove" : "Removed"} MCP server: ${serverName}`);

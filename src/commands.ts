@@ -1,5 +1,5 @@
 import type { PluginSpec, PluginSource, InstallResult, UninstallResult } from "./types.js";
-import { installPluginPackage, uninstallPluginPackage, peekManifest, peekSkills } from "./installer.js";
+import { installPluginPackage, uninstallPluginPackage, reinstallPluginPackage, peekManifest, peekSkills } from "./installer.js";
 import {
   listPlugins,
   registerMarketplace,
@@ -18,7 +18,7 @@ import {
   isMarketplaceRegistered,
   marketplacePluginToSpec,
 } from "./marketplace.js";
-import { green, red, bold, cyan, gray } from "./colors.js";
+import { green, red, yellow, bold, cyan, gray } from "./colors.js";
 
 // ─── CLI Command Implementations ────────────────────────────────────────────
 
@@ -202,6 +202,48 @@ export function cmdUninstall(name: string, local = false, verbose = false, dryRu
     }
   } else {
     console.error(`✗ Failed to uninstall plugin "${name}"`);
+    if (result.errors) {
+      for (const error of result.errors) {
+        console.error(`  ${error}`);
+      }
+    }
+  }
+
+  return result;
+}
+
+// ─── Reinstall Command ─────────────────────────────────────────────────────
+
+export async function cmdReinstall(name: string, local = false, verbose = false, dryRun = false, yes = false, outputDir?: string, backup = false): Promise<InstallResult> {
+  if (dryRun) {
+    console.log(bold("DRY RUN — no changes will be made"));
+  }
+  if (local) {
+    console.log(`  ${yellow("Scope")}: project`);
+  }
+  if (verbose) {
+    console.log(`  ${yellow("Verbose")}: enabled`);
+  }
+
+  console.log(bold(`Reinstalling plugin "${name}"...`));
+  const result = await reinstallPluginPackage(name, local, verbose, dryRun, yes, outputDir, backup);
+
+  if (result.success) {
+    console.log(green(`✓ Reinstalled plugin "${name}"`));
+    if (result.version) {
+      console.log(`  ${cyan("Version")}: ${result.version}${result.sha ? ` (${result.sha.slice(0, 8)})` : ""}`);
+    }
+    if (result.mcpServers.length > 0) {
+      console.log(`  ${cyan("MCP servers")}: ${result.mcpServers.join(", ")}`);
+    }
+    if (result.skills.length > 0) {
+      console.log(`  ${cyan("Skills")}: ${result.skills.join(", ")}`);
+    }
+    if (result.agents.length > 0) {
+      console.log(`  ${cyan("Agents")}: ${result.agents.join(", ")}`);
+    }
+  } else {
+    console.error(red(`✗ Failed to reinstall plugin "${name}"`));
     if (result.errors) {
       for (const error of result.errors) {
         console.error(`  ${error}`);

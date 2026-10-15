@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { cmdInstall, cmdUninstall, cmdList, cmdUpdate, cmdEnable, cmdDisable, cmdMarketplaceAdd, cmdMarketplaceList, cmdMarketplaceBrowse, cmdMarketplaceRefresh, cmdMarketplaceRemove, cmdSearch, cmdPeek, parseSpec } from "./commands.js";
+import { cmdInstall, cmdUninstall, cmdReinstall, cmdList, cmdUpdate, cmdEnable, cmdDisable, cmdMarketplaceAdd, cmdMarketplaceList, cmdMarketplaceBrowse, cmdMarketplaceRefresh, cmdMarketplaceRemove, cmdSearch, cmdPeek, parseSpec } from "./commands.js";
 import { bold, cyan, gray, red } from "./colors.js";
 import { formatError } from "./errors.js";
 
@@ -21,6 +21,8 @@ ${bold("COMMANDS:")}
     Install a plugin
   ${cyan("uninstall <name>")}${bold(" (aliases: remove, rm)")}
     Uninstall a plugin
+  ${cyan("reinstall <name>")}
+    Reinstall a plugin (uninstall then reinstall to restore originals)
 
 ${bold("OPTIONS:")}
   ${cyan("--local, -l")}           Install/uninstall at project level (.pi/mcp.json, .agents/)
@@ -189,6 +191,39 @@ EXAMPLES:
                           args.find((a) => a === "--output-dir") ? args[args.indexOf("--output-dir") + 1] : undefined;
         const backup = args.includes("--backup");
         const result = cmdUninstall(args[1], local, verbose, dryRun, yes, outputDir, backup);
+        process.exit(result.success ? 0 : 1);
+      }
+
+      case "reinstall": {
+        if (args.length < 2 || args[1] === "--help" || args[1] === "-h") {
+          console.log(`
+USAGE:
+  pi-copilot-plugins reinstall <name> [--local] [--verbose] [--dry-run]
+
+Reinstall an installed plugin (uninstall then reinstall to restore originals).
+
+OPTIONS:
+  --local, -l         Reinstall project-level plugin
+  --verbose, -V       Show verbose output
+  --dry-run           Preview reinstall without making changes
+  --yes, -y           Skip confirmation prompts (future use)
+  --output-dir <dir>  Custom install directory (overrides all default paths)
+  --backup            Create backup before modifying files
+
+EXAMPLES:
+  pi-copilot-plugins reinstall workiq
+  pi-copilot-plugins reinstall workiq --local
+`);
+          break;
+        }
+        const local = args.includes("--local") || args.includes("-l");
+        const verbose = args.includes("--verbose") || args.includes("-V");
+        const dryRun = args.includes("--dry-run");
+        const yes = args.includes("--yes") || args.includes("-y");
+        const outputDir = args.find((a) => a.startsWith("--output-dir="))?.split("=")[1] ||
+                          args.find((a) => a === "--output-dir") ? args[args.indexOf("--output-dir") + 1] : undefined;
+        const backup = args.includes("--backup");
+        const result = await cmdReinstall(args[1], local, verbose, dryRun, yes, outputDir, backup);
         process.exit(result.success ? 0 : 1);
       }
 
