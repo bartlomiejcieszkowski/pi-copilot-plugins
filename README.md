@@ -179,8 +179,8 @@ When installed as a Pi extension, this package provides:
 ## File Locations
 
 | Purpose | Path |
-|---------|------|
-| Plugin registry | `~/.pi/agent/copilot-plugins.json` |
+| --- | --- |
+| Plugin registry | `~/.pi/agent/pi-copilot-plugins.json` |
 | Plugin cache (downloaded source) | `~/.pi/agent/copilot-plugins-cache/<hash>/` |
 | Plugin data (runtime writable dir) | `~/.pi/agent/copilot-plugins-data/<name>/` |
 | MCP config | `~/.pi/agent/mcp.json` |

@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] — 2026-10-16
+
+### Added
+- `validate <file.json>` command — validates a manifest against Agent Plugins 1.0.0 spec
+- Manifest validator with checks for required fields, name constraints, metadata types, extensions field
+- Unknown fields reported and ignored per §5.2
+- Tool lock/unlock system — lock hides toggle tool permanently
+- Config file created with default marketplaces on first run
+- Reload warning after install/uninstall/update operations
+
+### Changed
+- Marketplace add uses `name` field from `marketplace.json` when available
+- Registry file renamed from `copilot-plugins.json` to `pi-copilot-plugins.json`
+
+### Fixed
+- Manifest detection improved with candidate path listing on failure
+- Backslash paths in skill/agent paths rejected per spec convention
+- Peek manifest handles subdirectory sources with normalized paths
+
 ## [0.5.0] — 2026-10-15
 
 ### Changed
