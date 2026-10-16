@@ -1,5 +1,13 @@
 import type { PluginSpec, PluginSource, InstallResult, UninstallResult } from "./types.js";
-import { installPluginPackage, uninstallPluginPackage, reinstallPluginPackage, peekManifest, peekSkills } from "./installer.js";
+import { readFileSync } from "node:fs";
+import {
+  installPluginPackage,
+  uninstallPluginPackage,
+  reinstallPluginPackage,
+  peekManifest,
+  peekSkills,
+} from "./installer.js";
+import { validateManifest } from "./validator.js";
 import {
   listPlugins,
   registerMarketplace,
@@ -555,6 +563,40 @@ export async function cmdSearch(query: string, json = false): Promise<void> {
     if (plugin.source) {
       console.log(`    from ${plugin.source}`);
     }
+  }
+}
+
+// ─── Validate Command ───────────────────────────────────────────────────────
+
+export function cmdValidate(filePath: string): void {
+  let content: string;
+  try {
+    content = readFileSync(filePath, "utf-8");
+  } catch (err: any) {
+    console.error(`Error reading file: ${err.message}`);
+    process.exit(2);
+  }
+
+  let manifest: Record<string, unknown>;
+  try {
+    manifest = JSON.parse(content);
+  } catch (err: any) {
+    console.error(`Error parsing JSON: ${err.message}`);
+    process.exit(2);
+  }
+
+  if (typeof manifest !== "object" || manifest === null || Array.isArray(manifest)) {
+    console.error("Error: manifest must be a JSON object.");
+    process.exit(2);
+  }
+
+  console.log(`Validating ${filePath} against Agent Plugins 1.0.0 spec...`);
+  const valid = validateManifest(manifest);
+  if (valid) {
+    console.log(`✓ ${filePath} is valid.`);
+  } else {
+    console.error(`✗ ${filePath} has validation errors.`);
+    process.exit(1);
   }
 }
 

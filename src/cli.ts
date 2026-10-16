@@ -16,7 +16,7 @@ try {
   // Use default if package.json can't be read
 }
 
-import { cmdInstall, cmdUninstall, cmdReinstall, cmdList, cmdUpdate, cmdEnable, cmdDisable, cmdMarketplaceAdd, cmdMarketplaceList, cmdMarketplaceBrowse, cmdMarketplaceRefresh, cmdMarketplaceRemove, cmdSearch, cmdPeek, parseSpec } from "./commands.js";
+import { cmdInstall, cmdUninstall, cmdReinstall, cmdList, cmdUpdate, cmdEnable, cmdDisable, cmdMarketplaceAdd, cmdMarketplaceList, cmdMarketplaceBrowse, cmdMarketplaceRefresh, cmdMarketplaceRemove, cmdSearch, cmdPeek, cmdValidate, parseSpec } from "./commands.js";
 import { bold, cyan, gray, red } from "./colors.js";
 import { formatError } from "./errors.js";
 
@@ -45,6 +45,7 @@ ${bold("OPTIONS:")}
   ${cyan("enable <name>")}         Enable a plugin
   ${cyan("disable <name>")}        Disable a plugin
   ${cyan("search <query>")}        Search for plugins in registered marketplaces
+  ${cyan("validate <file.json>")}    Validate a manifest against Agent Plugins 1.0.0 spec
 
 ${bold("MARKETPLACE COMMANDS:")}
   ${cyan("marketplace add <spec>")}${bold(" (alias: add)")}
@@ -336,6 +337,22 @@ EXAMPLES:
             console.error(`Unknown marketplace subcommand: ${subcommand}`);
             process.exit(2);
         }
+        break;
+      }
+
+      case "validate": {
+        if (args.length < 3 || args[2] === "--help" || args[2] === "-h") {
+          console.log(`
+USAGE:
+  pi-copilot-plugins validate <file.json>
+
+Validate a plugin manifest against Agent Plugins 1.0.0 spec.
+
+Prints warnings for any broken rules.
+`);
+          break;
+        }
+        cmdValidate(args[2]);
         break;
       }
 

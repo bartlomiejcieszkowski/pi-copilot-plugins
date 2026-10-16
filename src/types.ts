@@ -14,6 +14,7 @@ export interface AgentPluginsManifest {
   license?: string;
   keywords?: string[];
   extensions?: Record<string, unknown>;
+  [key: string]: unknown;
 }
 
 /** Legacy Copilot plugin manifest */

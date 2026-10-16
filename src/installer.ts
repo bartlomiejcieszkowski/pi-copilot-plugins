@@ -31,7 +31,8 @@ import {
 import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
 import { status, statusDone, statusSimple, stopSpinner } from "./progress.js";
-import { bold, cyan, gray } from "./colors.js";
+import { bold, cyan, gray, yellow } from "./colors.js";
+import { validateManifest } from "./validator.js";
 import { tmpdir } from "node:os";
 import {
   readFileSync,
@@ -106,6 +107,7 @@ export async function peekManifest(spec: PluginSpec): Promise<PluginManifest | n
         try {
           const manifest = JSON.parse(decoded) as PluginManifest;
           if ("$schema" in manifest) {
+            validateManifest(manifest);
             return manifest;
           }
           // Also accept legacy manifests (no $schema) that have mcpServers or skills
@@ -369,8 +371,9 @@ export function readManifest(pluginRoot: string, subPath?: string): PluginManife
       const content = readFileSync(manifestPath, "utf-8");
       const parsed = JSON.parse(content);
 
-      // If it's a valid manifest with $schema, return it
+      // Validate manifest against Agent Plugins 1.0.0 spec
       if ("$schema" in parsed) {
+        validateManifest(parsed);
         return parsed as PluginManifest;
       }
 

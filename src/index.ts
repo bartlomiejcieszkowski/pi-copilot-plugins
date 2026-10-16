@@ -2,6 +2,7 @@
 import type { ExtensionAPI, ExtensionCommandContext, ToolDefinition, ToolAnnotations, ToolNamespace } from "@earendil-works/pi-coding-agent";
 import type { Static } from "typebox";
 import { Type } from "typebox";
+import { readFileSync } from "node:fs";
 
 import type { PluginSpec } from "./types.js";
 import { listMarketplacePlugins, findPluginInMarketplace, searchMarketplacePlugins, marketplacePluginToSpec, fetchMarketplace } from "./marketplace.js";
@@ -456,6 +457,7 @@ async function handleSlashCommand(args: string, ctx: ExtensionCommandContext): P
       `  disable <name>        Disable a plugin\n` +
       `  search <query>        Search for plugins\n` +
       `  peek <spec>           Preview a plugin\n` +
+      `  validate <file.json>  Validate manifest\n` +
       `  tools                 Show tool toggle status\n` +
       `  tools enable          Enable all Copilot tools\n` +
       `  tools disable         Disable all Copilot tools\n` +
@@ -616,6 +618,26 @@ async function handleSlashCommand(args: string, ctx: ExtensionCommandContext): P
         }
         const result = await handlePeek(rest[0]);
         ui.notify(result.content[0].type === "text" ? result.content[0].text : "", "info");
+        break;
+      }
+      case "validate": {
+        if (!rest.length) {
+          ui.notify("Usage: /copilot-plugins validate <file.json>", "error");
+          return;
+        }
+        try {
+          const content = readFileSync(rest[0], "utf-8");
+          const manifest = JSON.parse(content);
+          console.log(`Validating ${rest[0]} against Agent Plugins 1.0.0 spec...`);
+          const valid = validateManifest(manifest);
+          if (valid) {
+            ui.notify(`✓ ${rest[0]} is valid`, "success");
+          } else {
+            ui.notify(`✗ ${rest[0]} has validation errors`, "error");
+          }
+        } catch (err: any) {
+          ui.notify(`✗ Error: ${err.message}`, "error");
+        }
         break;
       }
       case "tools": {
