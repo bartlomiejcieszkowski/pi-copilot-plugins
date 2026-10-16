@@ -167,12 +167,14 @@ function createLegacyManifestFromContent(
   _subPath: string | undefined,
   config: Record<string, unknown>
 ): PluginManifest {
+  const skills = "skills" in config && Array.isArray(config.skills)
+    ? config.skills as string[]
+    : ["skills"];
   return {
     $schema: "https://copilot-plugins.dev/schemas/legacy/v0.json",
-    name: repo.split("/").pop() || "unknown",
+    name: (config.name as string) || repo.split("/").pop() || "unknown",
     mcpServers: "mcpServers" in config ? (config.mcpServers as Record<string, unknown>) : {},
-    // Legacy plugins with .mcp.json typically have skills/ at repo root
-    skills: ["skills"],
+    skills,
   };
 }
 
@@ -378,13 +380,23 @@ export function readManifest(pluginRoot: string, subPath?: string): PluginManife
           parsed
         );
       }
+
+      // If it has skills, agents, or lspServers, treat as legacy manifest
+      if ("skills" in parsed || "agents" in parsed || "lspServers" in parsed) {
+        return createLegacyManifestFromContent(
+          parsed.name || "unknown",
+          subPath,
+          parsed
+        );
+      }
     } catch {
       // Try next candidate
     }
   }
 
   throw new Error(
-    `Failed to read plugin.json from ${pluginRoot}: no manifest found in any expected location`
+    `Failed to read plugin.json from ${pluginRoot}: no manifest found in any expected location\n` +
+    `Checked: ${candidates.join(", ")}`
   );
 }
 

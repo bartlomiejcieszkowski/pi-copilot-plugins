@@ -37,6 +37,17 @@ describe("isAgentPlugins", () => {
     };
     expect(isAgentPlugins(manifest)).toBe(true);
   });
+
+  it("reads manifest with Polish characters", () => {
+    const manifest = JSON.parse(
+      readFileSync(join(FIXTURES, "polish-manifest.json"), "utf-8")
+    );
+    expect(isAgentPlugins(manifest)).toBe(true);
+    expect(manifest.name).toBe("polski-test");
+    expect(manifest.description).toContain("polskimi znakami");
+    expect(manifest.skills[0].name).toBe("polskie-narzędzia");
+    expect(manifest.mcpServers["polski-serwer"]).toBeDefined();
+  });
 });
 
 // ─── MCP Conversion ─────────────────────────────────────────────────────────

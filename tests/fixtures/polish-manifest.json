@@ -1,0 +1,18 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "polski-test",
+  "version": "1.0.0",
+  "description": "Test z polskimi znakami: ąćęłńóśźż",
+  "skills": [
+    {
+      "name": "polskie-narzędzia",
+      "path": "skills/polskie-narzędzia/SKILL.md"
+    }
+  ],
+  "mcpServers": {
+    "polski-serwer": {
+      "command": "node",
+      "args": ["dist/server.js"]
+    }
+  }
+}

@@ -408,6 +408,7 @@ async function handleSlashCommand(args: string, ctx: ExtensionCommandContext): P
       `Commands:\n` +
       `  install <spec>        Install a plugin\n` +
       `  uninstall <name>      Uninstall a plugin\n` +
+      `  reinstall <name>      Reinstall a plugin\n` +
       `  list [--json]         List installed plugins\n` +
       `  update [name] [--all] Update a plugin or all\n` +
       `  enable <name>         Enable a plugin\n` +

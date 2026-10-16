@@ -1,0 +1,19 @@
+{
+  "name": "failing-test",
+  "description": "description goes here",
+  "version": "1.0.2",
+  "author": {
+    "name": "łąka zażółć gęślą jaźn"
+  },
+  "keywords": [
+    "azure",
+    "aks",
+    "kubernetes",
+    "troubleshooting",
+    "known-issues",
+    "gpu-inference",
+    "packet-capture"
+  ],
+  "skills": [ "./skills/" ],
+  "lspServers": "./lsp.json"
+}
