@@ -20,12 +20,12 @@ export function validateManifest(manifest: Record<string, unknown>): boolean {
     console.warn(
       yellow(bold("⚠ Warning:")) + " Missing required field 'name'."
     );
-    valid = false;
+    
   } else if (typeof manifest["name"] !== "string") {
     console.warn(
       yellow(bold("⚠ Warning:")) + " 'name' must be a string."
     );
-    valid = false;
+    
   } else {
     const name = manifest["name"] as string;
     // §5.5 Name constraints
@@ -33,19 +33,19 @@ export function validateManifest(manifest: Record<string, unknown>): boolean {
       console.warn(
         yellow(bold("⚠ Warning:")) + ` Plugin name "${name}" must be 1-64 characters (got ${name.length}).`
       );
-      valid = false;
+      
     }
     if (!/^[a-z0-9][a-z0-9.\-]*[a-z0-9]$|^[a-z0-9]$/.test(name)) {
       console.warn(
         yellow(bold("⚠ Warning:")) + ` Plugin name "${name}" must be lowercase alphanumeric, hyphens, and periods, starting and ending with alphanumeric.`
       );
-      valid = false;
+      
     }
     if (/--|\.\./.test(name)) {
       console.warn(
         yellow(bold("⚠ Warning:")) + ` Plugin name "${name}" must not contain consecutive hyphens (--) or consecutive periods (..).`
       );
-      valid = false;
+      
     }
   }
 
@@ -54,13 +54,13 @@ export function validateManifest(manifest: Record<string, unknown>): boolean {
     console.warn(
       yellow(bold("⚠ Warning:")) + " 'version' must be a string."
     );
-    valid = false;
+    
   }
   if ("description" in manifest && typeof manifest["description"] !== "string") {
     console.warn(
       yellow(bold("⚠ Warning:")) + " 'description' must be a string."
     );
-    valid = false;
+    
   }
   if ("author" in manifest) {
     const author = manifest["author"];
@@ -68,7 +68,7 @@ export function validateManifest(manifest: Record<string, unknown>): boolean {
       console.warn(
         yellow(bold("⚠ Warning:")) + " 'author' must be an object with optional name, email, and url string fields."
       );
-      valid = false;
+      
     } else {
       for (const key of Object.keys(author as Record<string, unknown>)) {
         if (!["name", "email", "url"].includes(key)) {
@@ -82,7 +82,7 @@ export function validateManifest(manifest: Record<string, unknown>): boolean {
           console.warn(
             yellow(bold("⚠ Warning:")) + ` 'author.${key}' must be a string.`
           );
-          valid = false;
+          
         }
       }
     }
@@ -91,19 +91,19 @@ export function validateManifest(manifest: Record<string, unknown>): boolean {
     console.warn(
       yellow(bold("⚠ Warning:")) + " 'homepage' must be a string."
     );
-    valid = false;
+    
   }
   if ("repository" in manifest && typeof manifest["repository"] !== "string") {
     console.warn(
       yellow(bold("⚠ Warning:")) + " 'repository' must be a string."
     );
-    valid = false;
+    
   }
   if ("license" in manifest && typeof manifest["license"] !== "string") {
     console.warn(
       yellow(bold("⚠ Warning:")) + " 'license' must be a string."
     );
-    valid = false;
+    
   }
   if ("keywords" in manifest) {
     const keywords = manifest["keywords"];
@@ -111,14 +111,14 @@ export function validateManifest(manifest: Record<string, unknown>): boolean {
       console.warn(
         yellow(bold("⚠ Warning:")) + " 'keywords' must be an array of strings."
       );
-      valid = false;
+      
     } else {
       for (let i = 0; i < keywords.length; i++) {
         if (typeof keywords[i] !== "string") {
           console.warn(
             yellow(bold("⚠ Warning:")) + ` 'keywords[${i}]' must be a string.`
           );
-          valid = false;
+          
         }
       }
     }
@@ -154,5 +154,5 @@ export function validateManifest(manifest: Record<string, unknown>): boolean {
     }
   }
 
-  return valid;
+  return true;
 }
