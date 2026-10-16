@@ -340,8 +340,9 @@ function getBaseDir(): string {
 }
 
 export const PI_AGENT_DIR = `${getBaseDir()}/.pi/agent`;
+export const COPILOT_PLUGINS_JSON_NAME = "pi-copilot-plugins.json";
 export const MCP_JSON = `${PI_AGENT_DIR}/mcp.json`;
-export const COPILOT_PLUGINS_JSON = `${PI_AGENT_DIR}/copilot-plugins.json`;
+export const COPILOT_PLUGINS_JSON = `${PI_AGENT_DIR}/${COPILOT_PLUGINS_JSON_NAME}`;
 export const PLUGIN_CACHE_DIR = `${PI_AGENT_DIR}/copilot-plugins-cache`;
 export const PLUGIN_DATA_DIR = `${PI_AGENT_DIR}/copilot-plugins-data`;
 
@@ -373,7 +374,7 @@ export function resolvePaths(scope: "user" | "project" = "user", outputDir?: str
       mcpJson: `${outputDir}/mcp.json`,
       skillsDir: `${outputDir}/skills`,
       agentsDir: `${outputDir}/agents`,
-      registry: `${outputDir}/copilot-plugins.json`,
+      registry: `${outputDir}/${COPILOT_PLUGINS_JSON_NAME}`,
       cacheDir: `${outputDir}/cache`,
       dataDir: `${outputDir}/data`,
     };
