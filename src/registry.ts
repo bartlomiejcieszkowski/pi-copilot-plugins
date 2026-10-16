@@ -11,23 +11,19 @@ import {
   COPILOT_PLUGINS_JSON,
   PLUGIN_CACHE_DIR,
   PLUGIN_DATA_DIR,
+  readOrCreateConfig,
 } from "./types.js";
-import { readFileSync, writeFileSync, renameSync, mkdtempSync, mkdirSync } from "fs";
+import { writeFileSync, renameSync, mkdtempSync, mkdirSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 
 // ─── Registry Operations ────────────────────────────────────────────────────
 
 /**
- * Read the plugin registry. Creates it if it doesn't exist.
+ * Read the plugin registry. Creates it with defaults if it doesn't exist.
  */
 export function readRegistry(): PluginRegistry {
-  try {
-    const content = readFileSync(COPILOT_PLUGINS_JSON, "utf-8");
-    return JSON.parse(content) as PluginRegistry;
-  } catch {
-    return { marketplaces: {}, plugins: {} };
-  }
+  return readOrCreateConfig();
 }
 
 /**

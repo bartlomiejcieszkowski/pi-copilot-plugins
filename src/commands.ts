@@ -14,7 +14,6 @@ import {
   listMarketplacePlugins,
   findPluginInMarketplace,
   searchMarketplacePlugins,
-  registerDefaultMarketplace,
   isMarketplaceRegistered,
   marketplacePluginToSpec,
 } from "./marketplace.js";
@@ -84,7 +83,6 @@ export function parseSpec(spec: string): PluginSpec {
 
   // Bare name — try marketplace first, then GitHub
   // For bare names, we assume it's from the default marketplace
-  registerDefaultMarketplace();
   return {
     name: spec,
     source: { type: "marketplace", marketplace: "copilot-plugins" },
@@ -158,6 +156,7 @@ export async function cmdInstall(spec: string, local = false, verbose = false, d
     if (result.agents.length > 0) {
       console.log(`  ${cyan("Agents")}: ${result.agents.join(", ")}`);
     }
+    console.log(`\n${yellow("Note: Changes to MCP servers and skills require a Pi reload to take effect. Run /reload or restart Pi to apply changes.")}`);
   } else {
     console.error(red(`✗ Failed to install plugin "${pluginSpec.name}"`));
     if (result.errors) {
@@ -200,6 +199,7 @@ export function cmdUninstall(name: string, local = false, verbose = false, dryRu
     if (result.removedAgents.length > 0) {
       console.log(`  Removed agents: ${result.removedAgents.join(", ")}`);
     }
+    console.log(`\n${yellow("Note: Changes to MCP servers and skills require a Pi reload to take effect. Run /reload or restart Pi to apply changes.")}`);
   } else {
     console.error(`✗ Failed to uninstall plugin "${name}"`);
     if (result.errors) {

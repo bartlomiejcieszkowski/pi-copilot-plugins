@@ -1,6 +1,6 @@
 // ─── Plugin Manifest Types ───────────────────────────────────────────────────
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 
 /** Agent Plugins 1.0 / 1.1 manifest */
 export interface AgentPluginsManifest {
@@ -218,70 +218,74 @@ export function getToolState(): Record<string, boolean> {
  * Enable or disable a tool in the config.
  */
 export function setToolEnabled(name: string, enabled: boolean): void {
-  try {
-    const registry = readFileSync(COPILOT_PLUGINS_JSON, "utf-8");
-    const parsed = JSON.parse(registry) as PluginRegistry;
-    if (!parsed.config) parsed.config = {};
-    if (!parsed.config.tools) parsed.config.tools = {};
-    parsed.config.tools[name] = enabled;
-    writeFileSync(COPILOT_PLUGINS_JSON, JSON.stringify(parsed, null, 2));
-  } catch {
-    // If we can't read the file, try to write a new one
-    const parsed: PluginRegistry = {
-      marketplaces: {},
-      plugins: {},
-      config: { tools: { [name]: enabled } },
-    };
-    writeFileSync(COPILOT_PLUGINS_JSON, JSON.stringify(parsed, null, 2));
-  }
+  const parsed = readOrCreateConfig();
+  if (!parsed.config) parsed.config = {};
+  if (!parsed.config.tools) parsed.config.tools = {};
+  parsed.config.tools[name] = enabled;
+  writeFileSync(COPILOT_PLUGINS_JSON, JSON.stringify(parsed, null, 2));
 }
 
 /**
  * Lock all Copilot tools — hide the toggle tool so the model can't change tools.
  */
 export function lockTools(): void {
-  try {
-    const registry = readFileSync(COPILOT_PLUGINS_JSON, "utf-8");
-    const parsed = JSON.parse(registry) as PluginRegistry;
-    if (!parsed.config) parsed.config = {};
-    parsed.config.toolsLocked = true;
-    writeFileSync(COPILOT_PLUGINS_JSON, JSON.stringify(parsed, null, 2));
-  } catch {
-    const parsed: PluginRegistry = {
-      marketplaces: {},
-      plugins: {},
-      config: { toolsLocked: true },
-    };
-    writeFileSync(COPILOT_PLUGINS_JSON, JSON.stringify(parsed, null, 2));
-  }
+  const parsed = readOrCreateConfig();
+  if (!parsed.config) parsed.config = {};
+  parsed.config.toolsLocked = true;
+  writeFileSync(COPILOT_PLUGINS_JSON, JSON.stringify(parsed, null, 2));
 }
 
 /**
  * Unlock all Copilot tools — show the toggle tool again.
  */
 export function unlockTools(): void {
-  try {
-    const registry = readFileSync(COPILOT_PLUGINS_JSON, "utf-8");
-    const parsed = JSON.parse(registry) as PluginRegistry;
-    if (!parsed.config) parsed.config = {};
-    parsed.config.toolsLocked = false;
-    writeFileSync(COPILOT_PLUGINS_JSON, JSON.stringify(parsed, null, 2));
-  } catch {
-    // Config file doesn't exist or is invalid
-  }
+  const parsed = readOrCreateConfig();
+  if (!parsed.config) parsed.config = {};
+  parsed.config.toolsLocked = false;
+  writeFileSync(COPILOT_PLUGINS_JSON, JSON.stringify(parsed, null, 2));
 }
 
 /**
  * Check if tools are locked.
  */
 export function isToolsLocked(): boolean {
-  try {
-    const registry = readFileSync(COPILOT_PLUGINS_JSON, "utf-8");
-    const parsed = JSON.parse(registry) as PluginRegistry;
-    return !!parsed.config?.toolsLocked;
-  } catch {
-    return false;
+  const parsed = readOrCreateConfig();
+  return !!parsed.config?.toolsLocked;
+}
+
+/**
+ * Create the config file with default marketplaces and default config values.
+ * Only called when the file doesn't exist yet.
+ */
+export function createDefaultConfig(): PluginRegistry {
+  const parsed: PluginRegistry = {
+    marketplaces: {
+      "copilot-plugins": {
+        source: "github/copilot-plugins",
+      },
+      "awesome-copilot": {
+        source: "github/awesome-copilot",
+      },
+    },
+    plugins: {},
+    config: {
+      tools: {},
+      toolsLocked: false,
+    },
+  };
+  writeFileSync(COPILOT_PLUGINS_JSON, JSON.stringify(parsed, null, 2));
+  return parsed;
+}
+
+/**
+ * Get the config file, creating it with defaults if it doesn't exist.
+ */
+export function readOrCreateConfig(): PluginRegistry {
+  if (!existsSync(COPILOT_PLUGINS_JSON)) {
+    return createDefaultConfig();
   }
+  const registry = readFileSync(COPILOT_PLUGINS_JSON, "utf-8");
+  return JSON.parse(registry) as PluginRegistry;
 }
 
 /**
@@ -289,14 +293,9 @@ export function isToolsLocked(): boolean {
  * Config token takes precedence over env vars.
  */
 export function getGitHubToken(): string | undefined {
-  try {
-    const registry = readFileSync(COPILOT_PLUGINS_JSON, "utf-8");
-    const parsed = JSON.parse(registry) as PluginRegistry;
-    if (parsed.config?.githubToken) {
-      return parsed.config.githubToken;
-    }
-  } catch {
-    // Config file doesn't exist or is invalid — fall through to env vars
+  const parsed = readOrCreateConfig();
+  if (parsed.config?.githubToken) {
+    return parsed.config.githubToken;
   }
   return process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
 }

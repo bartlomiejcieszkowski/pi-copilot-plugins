@@ -4,10 +4,10 @@ import type { Static } from "typebox";
 import { Type } from "typebox";
 
 import type { PluginSpec } from "./types.js";
-import { registerDefaultMarketplace, listMarketplacePlugins, findPluginInMarketplace, searchMarketplacePlugins, marketplacePluginToSpec, fetchMarketplace } from "./marketplace.js";
+import { listMarketplacePlugins, findPluginInMarketplace, searchMarketplacePlugins, marketplacePluginToSpec, fetchMarketplace } from "./marketplace.js";
 import { installPluginPackage, uninstallPluginPackage, reinstallPluginPackage, updatePluginPackage, peekManifest, peekSkills } from "./installer.js";
 import { listPlugins, enablePlugin, disablePlugin, getMarketplace, getPlugin, uninstallPlugin, registerMarketplace, unregisterMarketplace, listMarketplaces } from "./registry.js";
-import { getToolState, setToolEnabled, TOOL_NAMES, lockTools, unlockTools, isToolsLocked } from "./types.js";
+import { getToolState, setToolEnabled, TOOL_NAMES, lockTools, unlockTools, isToolsLocked, createDefaultConfig } from "./types.js";
 
 // ─── TypeBox Schemas ────────────────────────────────────────────────────────
 
@@ -434,8 +434,8 @@ export default function (pi: ExtensionAPI): void {
 async function handleSlashCommand(args: string, ctx: ExtensionCommandContext): Promise<void> {
   const { ui } = ctx;
 
-  // Ensure default marketplace is registered
-  registerDefaultMarketplace();
+  // Ensure default config file exists
+  createDefaultConfig();
 
   const parts = args.trim().split(/\s+/).filter(Boolean);
 
@@ -487,6 +487,7 @@ async function handleSlashCommand(args: string, ctx: ExtensionCommandContext): P
           if (result.mcpServers.length) output += `MCP: ${result.mcpServers.join(", ")}\n`;
           if (result.skills.length) output += `Skills: ${result.skills.join(", ")}\n`;
           if (result.agents.length) output += `Agents: ${result.agents.join(", ")}\n`;
+          output += `\n⚠️ Note: Changes to MCP servers and skills require a Pi reload to take effect. Run /reload or restart Pi to apply changes.`;
           ui.notify(output.trim(), "success");
         } else {
           ui.notify(`✗ Failed: ${result.errors?.join(", ") || "unknown error"}`, "error");
@@ -500,7 +501,9 @@ async function handleSlashCommand(args: string, ctx: ExtensionCommandContext): P
         }
         const result = uninstallPluginPackage(rest[0]);
         if (result.success) {
-          ui.notify(`✓ Uninstalled "${rest[0]}"`, "success");
+          let output = `✓ Uninstalled "${rest[0]}"`;
+          output += `\n\n⚠️ Note: Changes to MCP servers and skills require a Pi reload to take effect. Run /reload or restart Pi to apply changes.`;
+          ui.notify(output.trim(), "success");
         } else {
           ui.notify(`✗ Failed: ${result.errors?.join(", ") || "not found"}`, "error");
         }
@@ -513,7 +516,9 @@ async function handleSlashCommand(args: string, ctx: ExtensionCommandContext): P
         }
         const result = await reinstallPluginPackage(rest[0]);
         if (result.success) {
-          ui.notify(`✓ Reinstalled "${result.pluginName}"`, "success");
+          let output = `✓ Reinstalled "${result.pluginName}"`;
+          output += `\n\n⚠️ Note: Changes to MCP servers and skills require a Pi reload to take effect. Run /reload or restart Pi to apply changes.`;
+          ui.notify(output.trim(), "success");
         } else {
           ui.notify(`✗ Failed: ${result.errors?.join(", ") || "unknown error"}`, "error");
         }
@@ -556,11 +561,13 @@ async function handleSlashCommand(args: string, ctx: ExtensionCommandContext): P
               // Skip errors
             }
           }
-          ui.notify(`✓ Updated ${updated.length} plugin(s): ${updated.join(", ") || "none"}`, "info");
+          ui.notify(`✓ Updated ${updated.length} plugin(s): ${updated.join(", ") || "none"}\n\n⚠️ Note: Changes to MCP servers and skills require a Pi reload to take effect. Run /reload or restart Pi to apply changes.`, "info");
         } else {
           const result = await updatePluginPackage(name!);
           if (result.success) {
-            ui.notify(`✓ Updated "${result.pluginName}"`, "success");
+            let output = `✓ Updated "${result.pluginName}"`;
+            output += `\n\n⚠️ Note: Changes to MCP servers and skills require a Pi reload to take effect. Run /reload or restart Pi to apply changes.`;
+            ui.notify(output.trim(), "success");
           } else {
             ui.notify(`✗ Failed: ${result.errors?.join(", ") || "unknown error"}`, "error");
           }
@@ -816,6 +823,7 @@ async function handleInstall(spec: string): Promise<import("@earendil-works/pi-c
       if (result.agents.length > 0) {
         output += `Agents: ${result.agents.join(", ")}\n`;
       }
+      output += `\n⚠️ Note: Changes to MCP servers and skills require a Pi reload to take effect. Run /reload or restart Pi to apply changes.`;
       return { content: [{ type: "text", text: output }], details: { mcpServers: result.mcpServers, skills: result.skills, agents: result.agents } };
     } else {
       return {
@@ -857,7 +865,9 @@ function handleUninstall(name: string): import("@earendil-works/pi-coding-agent"
   const result = uninstallPluginPackage(name);
 
   if (result.success) {
-    return { content: [{ type: "text", text: `✓ Uninstalled "${name}"` }] };
+    let output = `✓ Uninstalled "${name}"`;
+    output += `\n\n⚠️ Note: Changes to MCP servers and skills require a Pi reload to take effect. Run /reload or restart Pi to apply changes.`;
+    return { content: [{ type: "text", text: output }] };
   } else {
     return {
       content: [{ type: "text", text: `✗ Failed to uninstall "${name}": ${result.errors?.join(", ") || "not found"}` }],
@@ -1006,7 +1016,7 @@ async function handleSearch(query: string, marketplace?: string): Promise<import
 
 async function handlePeek(spec: string): Promise<import("@earendil-works/pi-coding-agent").AgentToolResult> {
   try {
-    registerDefaultMarketplace();
+    createDefaultConfig();
 
     const marketplaces = listMarketplaces();
     if (marketplaces.length === 0) {

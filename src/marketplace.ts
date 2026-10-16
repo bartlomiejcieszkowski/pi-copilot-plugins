@@ -178,22 +178,6 @@ export function isMarketplaceRegistered(name: string): boolean {
 }
 
 /**
- * Register the default marketplaces if not already registered.
- */
-export function registerDefaultMarketplace(): void {
-  try {
-    if (!isMarketplaceRegistered(DEFAULT_MARKETPLACE)) {
-      registerMarketplace(DEFAULT_MARKETPLACE, DEFAULT_MARKETPLACE_SOURCE);
-    }
-    if (!isMarketplaceRegistered("awesome-copilot")) {
-      registerMarketplace("awesome-copilot", "github/awesome-copilot");
-    }
-  } catch {
-    // Registry not available (e.g., during tests), skip
-  }
-}
-
-/**
  * Convert a marketplace plugin source to a PluginSource.
  * @param marketplaceSource - The full repo path of the marketplace (e.g. "github/awesome-copilot").
  *                            Used when plugin.source is a subdirectory path within the marketplace.
