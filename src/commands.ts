@@ -16,6 +16,7 @@ import {
   searchMarketplacePlugins,
   isMarketplaceRegistered,
   marketplacePluginToSpec,
+  fetchMarketplace,
 } from "./marketplace.js";
 import { green, red, yellow, bold, cyan, gray } from "./colors.js";
 
@@ -358,8 +359,19 @@ export async function cmdMarketplaceAdd(spec: string): Promise<void> {
   const source = parseMarketplaceSource(spec);
   const name = source.name;
 
-  registerMarketplace(name, source.source);
-  console.log(`✓ Marketplace "${name}" added.`);
+  // Try to fetch the manifest and use its name if available
+  let displayName = name;
+  try {
+    const { manifest } = await fetchMarketplace(source.source);
+    if (manifest.name) {
+      displayName = manifest.name;
+    }
+  } catch {
+    // Ignore fetch errors — fall back to extracted name
+  }
+
+  registerMarketplace(displayName, source.source);
+  console.log(`✓ Marketplace "${displayName}" added.`);
 }
 
 function parseMarketplaceSource(spec: string): { name: string; source: string } {
@@ -499,22 +511,6 @@ function extractNames(arr: unknown[]): string[] {
   });
 }
 
-/**
- * Extract skill names from manifest skills field.
- * Skills can be strings (paths) or objects with name/path.
- */
-function extractSkillNames(skills: unknown): string[] {
-  if (!Array.isArray(skills)) return [];
-  return skills.map(item => {
-    if (typeof item === "string") return item;
-    if (item && typeof item === "object") {
-      if ("name" in item) return (item as { name: string }).name;
-      if ("path" in item) return (item as { path: string }).path;
-    }
-    return "unknown";
-  });
-}
-
 // ─── Search Command ─────────────────────────────────────────────────────────
 
 export async function cmdSearch(query: string, json = false): Promise<void> {
@@ -607,7 +603,7 @@ export async function cmdPeek(spec: string, json = false): Promise<void> {
     if (targetMarketplace && mp.source !== targetMarketplace && mp.name !== targetMarketplace) continue;
 
     try {
-      const { plugins, stale } = await listMarketplacePlugins(mp.source);
+      const { plugins } = await listMarketplacePlugins(mp.source);
       const match = plugins.find(p => p.name.toLowerCase() === pluginName.toLowerCase());
       if (!match) continue;
 
