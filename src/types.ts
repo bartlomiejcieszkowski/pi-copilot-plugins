@@ -157,6 +157,7 @@ export interface PluginRegistry {
 export interface PluginConfig {
   githubToken?: string;
   tools?: Record<string, boolean>;
+  toolsLocked?: boolean;
 }
 
 /** Built-in tool names */
@@ -232,6 +233,54 @@ export function setToolEnabled(name: string, enabled: boolean): void {
       config: { tools: { [name]: enabled } },
     };
     writeFileSync(COPILOT_PLUGINS_JSON, JSON.stringify(parsed, null, 2));
+  }
+}
+
+/**
+ * Lock all Copilot tools — hide the toggle tool so the model can't change tools.
+ */
+export function lockTools(): void {
+  try {
+    const registry = readFileSync(COPILOT_PLUGINS_JSON, "utf-8");
+    const parsed = JSON.parse(registry) as PluginRegistry;
+    if (!parsed.config) parsed.config = {};
+    parsed.config.toolsLocked = true;
+    writeFileSync(COPILOT_PLUGINS_JSON, JSON.stringify(parsed, null, 2));
+  } catch {
+    const parsed: PluginRegistry = {
+      marketplaces: {},
+      plugins: {},
+      config: { toolsLocked: true },
+    };
+    writeFileSync(COPILOT_PLUGINS_JSON, JSON.stringify(parsed, null, 2));
+  }
+}
+
+/**
+ * Unlock all Copilot tools — show the toggle tool again.
+ */
+export function unlockTools(): void {
+  try {
+    const registry = readFileSync(COPILOT_PLUGINS_JSON, "utf-8");
+    const parsed = JSON.parse(registry) as PluginRegistry;
+    if (!parsed.config) parsed.config = {};
+    parsed.config.toolsLocked = false;
+    writeFileSync(COPILOT_PLUGINS_JSON, JSON.stringify(parsed, null, 2));
+  } catch {
+    // Config file doesn't exist or is invalid
+  }
+}
+
+/**
+ * Check if tools are locked.
+ */
+export function isToolsLocked(): boolean {
+  try {
+    const registry = readFileSync(COPILOT_PLUGINS_JSON, "utf-8");
+    const parsed = JSON.parse(registry) as PluginRegistry;
+    return !!parsed.config?.toolsLocked;
+  } catch {
+    return false;
   }
 }
 

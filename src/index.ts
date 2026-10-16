@@ -7,7 +7,7 @@ import type { PluginSpec } from "./types.js";
 import { registerDefaultMarketplace, listMarketplacePlugins, findPluginInMarketplace, searchMarketplacePlugins, marketplacePluginToSpec, fetchMarketplace } from "./marketplace.js";
 import { installPluginPackage, uninstallPluginPackage, reinstallPluginPackage, updatePluginPackage, peekManifest, peekSkills } from "./installer.js";
 import { listPlugins, enablePlugin, disablePlugin, getMarketplace, getPlugin, uninstallPlugin, registerMarketplace, unregisterMarketplace, listMarketplaces } from "./registry.js";
-import { getToolState, setToolEnabled, TOOL_NAMES } from "./types.js";
+import { getToolState, setToolEnabled, TOOL_NAMES, lockTools, unlockTools, isToolsLocked } from "./types.js";
 
 // ─── TypeBox Schemas ────────────────────────────────────────────────────────
 
@@ -160,8 +160,44 @@ export default function (pi: ExtensionAPI): void {
 
   reRegisterTools("hidden");
 
+  // ─── Tools Lock/Unlock ─────────────────────────────────────────────────────
+
+  function handleToolsLock(): void {
+    lockTools();
+    reRegisterToolsForLock(true);
+    ui.notify("✓ Copilot tools locked. Toggle tool hidden.", "success");
+  }
+
+  function handleToolsUnlock(): void {
+    unlockTools();
+    reRegisterToolsForLock(false);
+    ui.notify("✓ Copilot tools unlocked. Toggle tool restored.", "success");
+  }
+
+  function reRegisterToolsForLock(locked: boolean): void {
+    // Only controls the toggle tool visibility — does NOT affect the 14 tools
+    registerToolWithExposure(pi, "copilot_plugins_tools_toggle", {
+      label: "Toggle Copilot Tools",
+      description: "Enable or disable all Copilot plugin tools. When disabled, tools are hidden from the model to save context. When enabled, all 14 tools become available for the model to use.",
+      promptSnippet: "Toggle Copilot plugin tools on/off",
+      promptGuidelines: [
+        "Use this to enable tools when the model needs to browse, install, or manage plugins",
+        "Tools are disabled by default to save context",
+        "Enable tools when you need to install, browse, search, or manage plugins",
+        "Disable tools again after you're done to save context",
+      ],
+      parameters: ToolsToggleParams,
+      annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+      execute: async (toolCallId, params, signal, onUpdate, ctx) => handleToolsToggle(params.enabled),
+    }, locked ? "hidden" : "direct");
+  }
+
   // ─── Tools Toggle Tool ─────────────────────────────────────────────────────
 
+  // Check if tools were previously locked
+  const wasLocked = isToolsLocked();
+
+  // Register toggle tool first (hidden by default)
   pi.registerTool({
     name: "copilot_plugins_tools_toggle",
     label: "Toggle Copilot Tools",
@@ -174,11 +210,16 @@ export default function (pi: ExtensionAPI): void {
       "Disable tools again after you're done to save context",
     ],
     parameters: ToolsToggleParams,
-    exposure: "direct",
+    exposure: "hidden",
     namespace: COPILOT_PLUGINS_NAMESPACE,
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     execute: async (toolCallId, params, signal, onUpdate, ctx) => handleToolsToggle(params.enabled),
   });
+
+  // Restore lock state if it was locked (hide toggle tool)
+  if (wasLocked) {
+    reRegisterToolsForLock(true);
+  }
 
   // ─── Tools Toggle Handler ──────────────────────────────────────────────────
 
@@ -418,6 +459,8 @@ async function handleSlashCommand(args: string, ctx: ExtensionCommandContext): P
       `  tools                 Show tool toggle status\n` +
       `  tools enable          Enable all Copilot tools\n` +
       `  tools disable         Disable all Copilot tools\n` +
+      `  tools lock            Lock tools permanently (hide toggle)\n` +
+      `  tools unlock          Unlock tools (show toggle again)\n` +
       `  marketplace add <src> Add a marketplace\n` +
       `  marketplace list      List marketplaces\n` +
       `  marketplace browse <name> Browse marketplace\n` +
@@ -598,8 +641,14 @@ async function handleSlashCommand(args: string, ctx: ExtensionCommandContext): P
         } else if (sub === "disable") {
           handleToolsToggle(false);
           ui.notify("✓ Copilot tools disabled.", "success");
+        } else if (sub === "lock") {
+          handleToolsLock();
+          ui.notify("✓ Copilot tools locked. All tools hidden.", "success");
+        } else if (sub === "unlock") {
+          handleToolsUnlock();
+          ui.notify("✓ Copilot tools unlocked. Toggle tool restored.", "success");
         } else {
-          ui.notify("Usage: /copilot-plugins tools [enable|disable]\nRun /copilot-plugins tools (no args) to see current status.", "error");
+          ui.notify("Usage: /copilot-plugins tools [enable|disable|lock|unlock]\nRun /copilot-plugins tools (no args) to see current status.", "error");
         }
         break;
       }
