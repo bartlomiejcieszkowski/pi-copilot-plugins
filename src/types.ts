@@ -1,6 +1,7 @@
 // ─── Plugin Manifest Types ───────────────────────────────────────────────────
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 
 /** Agent Plugins 1.0 / 1.1 manifest */
 export interface AgentPluginsManifest {
@@ -274,6 +275,10 @@ export function createDefaultConfig(): PluginRegistry {
       toolsLocked: false,
     },
   };
+  const dir = dirname(COPILOT_PLUGINS_JSON);
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
   writeFileSync(COPILOT_PLUGINS_JSON, JSON.stringify(parsed, null, 2));
   return parsed;
 }
