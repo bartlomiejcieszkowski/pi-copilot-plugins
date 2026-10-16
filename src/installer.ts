@@ -85,6 +85,8 @@ export async function peekManifest(spec: PluginSpec): Promise<PluginManifest | n
   try {
     if (spec.source.type === "github") {
       const { repo, path: subPath } = spec.source;
+      // Normalize subPath — strip leading ./ for GitHub API
+      const normalizedSubPath = subPath ? subPath.replace(/^\.\//, "") : undefined;
 
       // Build headers — add token if available (config takes precedence over env)
       const headers: Record<string, string> = { Accept: "application/vnd.github.v3+json" };
@@ -92,8 +94,8 @@ export async function peekManifest(spec: PluginSpec): Promise<PluginManifest | n
       if (token) headers["Authorization"] = `token ${token}`;
 
       // Try .github/plugin.json first (Agent Plugins 1.0)
-      const apiUrl = subPath
-        ? `https://api.github.com/repos/${repo}/contents/${subPath}/plugin.json`
+      const apiUrl = normalizedSubPath
+        ? `https://api.github.com/repos/${repo}/contents/${normalizedSubPath}/plugin.json`
         : `https://api.github.com/repos/${repo}/contents/.github/plugin.json`;
 
       let response = await fetch(apiUrl, { headers });
@@ -118,8 +120,8 @@ export async function peekManifest(spec: PluginSpec): Promise<PluginManifest | n
       // Try legacy format: .mcp.json or .github/mcp.json
       // Also try at subPath for plugins with a subdirectory source
       const legacyPaths = [".mcp.json", ".github/mcp.json"];
-      if (subPath) {
-        legacyPaths.push(subPath + "/.mcp.json");
+      if (normalizedSubPath) {
+        legacyPaths.push(normalizedSubPath + "/.mcp.json");
       }
       for (const legacyPath of legacyPaths) {
         const legacyUrl = `https://api.github.com/repos/${repo}/contents/${legacyPath}`;
@@ -667,13 +669,13 @@ export async function reinstallPluginPackage(
  * Write MCP servers to Pi's mcp.json using atomic merge.
  */
 async function writeMcpServers(
-  piMcpServers: Record<string, any>,
+  piMcpServers: Record<string, unknown>,
   spec: PluginSpec,
   local = false
 ): Promise<string[]> {
   const scope: "user" | "project" = local ? "project" : "user";
   const { mcpJson: mcpJsonPath } = resolvePaths(scope);
-  let mcpConfig: Record<string, any> = {};
+  let mcpConfig: Record<string, unknown> = {};
 
   // Read existing mcp.json
   if (existsSync(mcpJsonPath)) {
@@ -693,7 +695,7 @@ async function writeMcpServers(
   // Merge in new servers under mcpServers
   const installedMcp: string[] = [];
   for (const [name, server] of Object.entries(piMcpServers)) {
-    mcpConfig.mcpServers[name] = server;
+    (mcpConfig.mcpServers as Record<string, unknown>)[name] = server;
     installedMcp.push(name);
   }
 
@@ -974,7 +976,7 @@ export async function updatePluginPackage(
 
     // Merge MCP servers into mcp.json
     const { mcpJson } = resolvePaths(local ? "project" : "user");
-    let piMcpServers: Record<string, any> = {};
+    let piMcpServers: Record<string, unknown> = {};
 
     if (existsSync(mcpJson)) {
       try {
