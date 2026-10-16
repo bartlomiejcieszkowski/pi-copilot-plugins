@@ -155,6 +155,13 @@ export function extractSkills(
   }
 
   for (const skillPath of skillPaths) {
+    if (/\\/.test(skillPath)) {
+      throw new Error(
+        `Plugin "${manifest.name}": skill path "${skillPath}" uses backslashes. ` +
+        `The Agent Plugins spec requires forward slashes (e.g. "skills/"). ` +
+        `Please fix the plugin manifest and reinstall.`
+      );
+    }
     const fullSkillPath = `${pluginRoot}/${skillPath}`;
     const entries = listDirectory(fullSkillPath);
     for (const entry of entries) {
@@ -199,6 +206,13 @@ export function extractAgents(
   }
 
   for (const agentPath of agentPaths) {
+    if (/\\/.test(agentPath)) {
+      throw new Error(
+        `Plugin "${manifest.name}": agent path "${agentPath}" uses backslashes. ` +
+        `The Agent Plugins spec requires forward slashes (e.g. "agents/"). ` +
+        `Please fix the plugin manifest and reinstall.`
+      );
+    }
     const fullAgentPath = `${pluginRoot}/${agentPath}`;
     const entries = listDirectory(fullAgentPath);
     for (const entry of entries) {

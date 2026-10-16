@@ -50,6 +50,32 @@ describe("isAgentPlugins", () => {
   });
 });
 
+// ─── Path Validation ────────────────────────────────────────────────────────
+
+describe("extractSkills path validation", () => {
+  it("rejects backslash skill paths", () => {
+    const manifest = {
+      name: "test",
+      skills: [".\\skills\\"],
+    };
+    expect(() => extractSkills(manifest as any, "/tmp")).toThrow(
+      /backslashes.*forward slashes/
+    );
+  });
+});
+
+describe("extractAgents path validation", () => {
+  it("rejects backslash agent paths", () => {
+    const manifest = {
+      name: "test",
+      agents: ".\\agents\\",
+    };
+    expect(() => extractAgents(manifest as any, "/tmp")).toThrow(
+      /backslashes.*forward slashes/
+    );
+  });
+});
+
 // ─── MCP Conversion ─────────────────────────────────────────────────────────
 
 describe("convertMcpServers", () => {
