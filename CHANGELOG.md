@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Path constants use path.join to prevent existsSync false negatives on Windows
 - writeRegistry atomic rename works on Windows cross-drive scenarios
 - readOrCreateConfig handles malformed JSON gracefully
+- npm pkg fix: bin path (`./dist/cli.js` → `dist/cli.js`), repository.url normalized to `git+https://`
 
 ## [0.6.0] — 2026-10-16
 

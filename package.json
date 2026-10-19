@@ -18,7 +18,7 @@
     "node": ">=22"
   },
   "bin": {
-    "pi-copilot-plugins": "./dist/cli.js"
+    "pi-copilot-plugins": "dist/cli.js"
   },
   "exports": {
     ".": {
@@ -61,7 +61,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/bartlomiejcieszkowski/pi-copilot-plugins.git"
+    "url": "git+https://github.com/bartlomiejcieszkowski/pi-copilot-plugins.git"
   },
   "homepage": "https://github.com/bartlomiejcieszkowski/pi-copilot-plugins",
   "author": "Bartlomiej Cieszkowski <bartlomiej.cieszkowski@gmail.com>",
