@@ -13,7 +13,7 @@ import {
   PLUGIN_DATA_DIR,
   readOrCreateConfig,
 } from "./types.js";
-import { writeFileSync, renameSync, mkdirSync, existsSync } from "fs";
+import { writeFileSync, readFileSync, renameSync, mkdirSync, existsSync } from "fs";
 import { join, dirname } from "path";
 
 // ─── Registry Operations ────────────────────────────────────────────────────
@@ -27,14 +27,27 @@ export function readRegistry(): PluginRegistry {
 
 /**
  * Write the plugin registry. Uses atomic write (temp file + rename).
+ * Only writes if content actually changed.
  */
 export function writeRegistry(registry: PluginRegistry): void {
+  const newContent = JSON.stringify(registry, null, 2);
+
+  // Only write if content changed
+  if (existsSync(COPILOT_PLUGINS_JSON)) {
+    try {
+      const existing = readFileSync(COPILOT_PLUGINS_JSON, "utf-8");
+      if (existing === newContent) return;
+    } catch {
+      // File unreadable — proceed with write
+    }
+  }
+
   const dir = dirname(COPILOT_PLUGINS_JSON);
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }
   const tmpFile = join(dir, "pi-copilot-plugins.json.tmp");
-  writeFileSync(tmpFile, JSON.stringify(registry, null, 2), "utf-8");
+  writeFileSync(tmpFile, newContent, "utf-8");
   renameSync(tmpFile, COPILOT_PLUGINS_JSON);
 }
 
