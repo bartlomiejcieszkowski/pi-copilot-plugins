@@ -13,9 +13,8 @@ import {
   PLUGIN_DATA_DIR,
   readOrCreateConfig,
 } from "./types.js";
-import { writeFileSync, renameSync, mkdtempSync, mkdirSync } from "fs";
-import { join } from "path";
-import { tmpdir } from "os";
+import { writeFileSync, renameSync, mkdirSync, existsSync } from "fs";
+import { join, dirname } from "path";
 
 // ─── Registry Operations ────────────────────────────────────────────────────
 
@@ -30,22 +29,13 @@ export function readRegistry(): PluginRegistry {
  * Write the plugin registry. Uses atomic write (temp file + rename).
  */
 export function writeRegistry(registry: PluginRegistry): void {
-  const tmpDir = mkdtempSync(join(tmpdir(), "pi-copilot-plugins-"));
-  const tmpFile = join(tmpDir, "copilot-plugins.json.tmp");
-
-  writeFileSync(tmpFile, JSON.stringify(registry, null, 2), "utf-8");
-
-  try {
-    renameSync(tmpFile, COPILOT_PLUGINS_JSON);
-  } catch {
-    // Fallback: ensure dir exists, then direct write
-    try {
-      mkdirSync(join(COPILOT_PLUGINS_JSON, ".."), { recursive: true });
-    } catch {
-      // Dir might already exist
-    }
-    writeFileSync(COPILOT_PLUGINS_JSON, JSON.stringify(registry, null, 2), "utf-8");
+  const dir = dirname(COPILOT_PLUGINS_JSON);
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
   }
+  const tmpFile = join(dir, "pi-copilot-plugins.json.tmp");
+  writeFileSync(tmpFile, JSON.stringify(registry, null, 2), "utf-8");
+  renameSync(tmpFile, COPILOT_PLUGINS_JSON);
 }
 
 /**

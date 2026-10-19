@@ -4,3 +4,4 @@ dist/
 .agents/
 copilot-plugins.json
 docs/
+.vitest/

@@ -1,5 +1,5 @@
 // Backup utility for creating timestamped backups before file modifications.
-import { existsSync, readFileSync, writeFileSync, mkdirSync, copyFileSync } from "node:fs";
+import { mkdirSync, copyFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
 /**

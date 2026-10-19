@@ -3,12 +3,13 @@ import type { ExtensionAPI, ExtensionCommandContext, ToolDefinition, ToolAnnotat
 import type { Static } from "typebox";
 import { Type } from "typebox";
 import { readFileSync } from "node:fs";
+import { COPILOT_PLUGINS_JSON } from "./types.js";
 
 import type { PluginSpec } from "./types.js";
 import { listMarketplacePlugins, findPluginInMarketplace, searchMarketplacePlugins, marketplacePluginToSpec, fetchMarketplace } from "./marketplace.js";
 import { installPluginPackage, uninstallPluginPackage, reinstallPluginPackage, updatePluginPackage, peekManifest, peekSkills } from "./installer.js";
 import { listPlugins, enablePlugin, disablePlugin, getMarketplace, getPlugin, uninstallPlugin, registerMarketplace, unregisterMarketplace, listMarketplaces } from "./registry.js";
-import { getToolState, setToolEnabled, TOOL_NAMES, lockTools, unlockTools, isToolsLocked, createDefaultConfig } from "./types.js";
+import { getToolState, setToolEnabled, TOOL_NAMES, lockTools, unlockTools, isToolsLocked } from "./types.js";
 
 // ─── TypeBox Schemas ────────────────────────────────────────────────────────
 
@@ -434,9 +435,6 @@ export default function (pi: ExtensionAPI): void {
 
 async function handleSlashCommand(args: string, ctx: ExtensionCommandContext): Promise<void> {
   const { ui } = ctx;
-
-  // Ensure default config file exists
-  createDefaultConfig();
 
   const parts = args.trim().split(/\s+/).filter(Boolean);
 
@@ -1038,8 +1036,6 @@ async function handleSearch(query: string, marketplace?: string): Promise<import
 
 async function handlePeek(spec: string): Promise<import("@earendil-works/pi-coding-agent").AgentToolResult> {
   try {
-    createDefaultConfig();
-
     const marketplaces = listMarketplaces();
     if (marketplaces.length === 0) {
       return { content: [{ type: "text", text: "No marketplaces registered. Add one with: pi-copilot-plugins marketplace add <source>" }] };

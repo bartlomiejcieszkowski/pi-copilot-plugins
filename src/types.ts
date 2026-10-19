@@ -1,7 +1,7 @@
 // ─── Plugin Manifest Types ───────────────────────────────────────────────────
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, join, normalize } from "node:path";
 
 /** Agent Plugins 1.0 / 1.1 manifest */
 export interface AgentPluginsManifest {
@@ -260,6 +260,11 @@ export function isToolsLocked(): boolean {
  * Only called when the file doesn't exist yet.
  */
 export function createDefaultConfig(): PluginRegistry {
+  // Only create if file doesn't exist — don't overwrite existing config
+  if (existsSync(COPILOT_PLUGINS_JSON)) {
+    return JSON.parse(readFileSync(COPILOT_PLUGINS_JSON, "utf-8")) as PluginRegistry;
+  }
+
   const parsed: PluginRegistry = {
     marketplaces: {
       "copilot-plugins": {
@@ -290,8 +295,12 @@ export function readOrCreateConfig(): PluginRegistry {
   if (!existsSync(COPILOT_PLUGINS_JSON)) {
     return createDefaultConfig();
   }
-  const registry = readFileSync(COPILOT_PLUGINS_JSON, "utf-8");
-  return JSON.parse(registry) as PluginRegistry;
+  try {
+    const registry = readFileSync(COPILOT_PLUGINS_JSON, "utf-8");
+    return JSON.parse(registry) as PluginRegistry;
+  } catch {
+    return createDefaultConfig();
+  }
 }
 
 /**
@@ -393,26 +402,26 @@ function getBaseDir(): string {
   return process.env.HOME || process.env.USERPROFILE || "";
 }
 
-export const PI_AGENT_DIR = `${getBaseDir()}/.pi/agent`;
+export const PI_AGENT_DIR = join(getBaseDir(), ".pi", "agent");
 export const COPILOT_PLUGINS_JSON_NAME = "pi-copilot-plugins.json";
-export const MCP_JSON = `${PI_AGENT_DIR}/mcp.json`;
-export const COPILOT_PLUGINS_JSON = `${PI_AGENT_DIR}/${COPILOT_PLUGINS_JSON_NAME}`;
-export const PLUGIN_CACHE_DIR = `${PI_AGENT_DIR}/copilot-plugins-cache`;
-export const PLUGIN_DATA_DIR = `${PI_AGENT_DIR}/copilot-plugins-data`;
+export const MCP_JSON = join(PI_AGENT_DIR, "mcp.json");
+export const COPILOT_PLUGINS_JSON = join(PI_AGENT_DIR, COPILOT_PLUGINS_JSON_NAME);
+export const PLUGIN_CACHE_DIR = join(PI_AGENT_DIR, "copilot-plugins-cache");
+export const PLUGIN_DATA_DIR = join(PI_AGENT_DIR, "copilot-plugins-data");
 
 // Project-level paths (relative to CWD)
-export const PI_MCP_JSON = `${process.cwd()}/.pi/mcp.json`;
-export const PI_PROJECT_DIR = `${process.cwd()}/.pi`;
+export const PI_MCP_JSON = join(process.cwd(), ".pi", "mcp.json");
+export const PI_PROJECT_DIR = process.cwd();
 
 // Pi skill/agent discovery directories — user-level
-export const AGENTS_DIR = process.env.AGENTS_DIR || `${getBaseDir()}/.agents`;
-export const SKILLS_DIR = `${AGENTS_DIR}/skills`;
-export const AGENTS_SKILLS_DIR = `${AGENTS_DIR}/agents`;
+export const AGENTS_DIR = process.env.AGENTS_DIR || join(getBaseDir(), ".agents");
+export const SKILLS_DIR = join(AGENTS_DIR, "skills");
+export const AGENTS_SKILLS_DIR = join(AGENTS_DIR, "agents");
 
 // Pi skill/agent discovery directories — project-level
-export const PROJECT_AGENTS_DIR = `${process.cwd()}/.agents`;
-export const PROJECT_SKILLS_DIR = `${PROJECT_AGENTS_DIR}/skills`;
-export const PROJECT_AGENTS_DIR_PATH = `${PROJECT_AGENTS_DIR}/agents`;
+export const PROJECT_AGENTS_DIR = join(process.cwd(), ".agents");
+export const PROJECT_SKILLS_DIR = join(PROJECT_AGENTS_DIR, "skills");
+export const PROJECT_AGENTS_DIR_PATH = join(PROJECT_AGENTS_DIR, "agents");
 
 /** Resolve paths based on scope (user vs project). */
 export function resolvePaths(scope: "user" | "project" = "user", outputDir?: string): {
@@ -425,12 +434,12 @@ export function resolvePaths(scope: "user" | "project" = "user", outputDir?: str
 } {
   if (outputDir) {
     return {
-      mcpJson: `${outputDir}/mcp.json`,
-      skillsDir: `${outputDir}/skills`,
-      agentsDir: `${outputDir}/agents`,
-      registry: `${outputDir}/${COPILOT_PLUGINS_JSON_NAME}`,
-      cacheDir: `${outputDir}/cache`,
-      dataDir: `${outputDir}/data`,
+      mcpJson: join(outputDir, "mcp.json"),
+      skillsDir: join(outputDir, "skills"),
+      agentsDir: join(outputDir, "agents"),
+      registry: join(outputDir, COPILOT_PLUGINS_JSON_NAME),
+      cacheDir: join(outputDir, "cache"),
+      dataDir: join(outputDir, "data"),
     };
   }
   if (scope === "project") {
