@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] — 2026-10-19
+
+### Changed
+- writeRegistry only writes when content actually changed (prevents unnecessary file modifications)
+- createDefaultConfig no longer overwrites existing config on every access
+
+### Fixed
+- Path constants use path.join to prevent existsSync false negatives on Windows
+- writeRegistry atomic rename works on Windows cross-drive scenarios
+- readOrCreateConfig handles malformed JSON gracefully
+
 ## [0.6.0] — 2026-10-16
 
 ### Added

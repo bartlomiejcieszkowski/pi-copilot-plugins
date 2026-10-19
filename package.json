@@ -1,6 +1,6 @@
 {
   "name": "pi-copilot-plugins",
-  "version": "0.6.0",
+  "version": "1.0.0",
   "description": "Install GitHub Copilot plugins into Pi — extract MCP servers, skills, and agents",
   "keywords": [
     "pi-package",
