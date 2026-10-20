@@ -164,18 +164,6 @@ export default function (pi: ExtensionAPI): void {
 
   // ─── Tools Lock/Unlock ─────────────────────────────────────────────────────
 
-  function handleToolsLock(): void {
-    lockTools();
-    reRegisterToolsForLock(true);
-    ui.notify("✓ Copilot tools locked. Toggle tool hidden.", "success");
-  }
-
-  function handleToolsUnlock(): void {
-    unlockTools();
-    reRegisterToolsForLock(false);
-    ui.notify("✓ Copilot tools unlocked. Toggle tool restored.", "success");
-  }
-
   function reRegisterToolsForLock(locked: boolean): void {
     // Only controls the toggle tool visibility — does NOT affect the 14 tools
     registerToolWithExposure(pi, "copilot_plugins_tools_toggle", {
@@ -190,7 +178,10 @@ export default function (pi: ExtensionAPI): void {
       ],
       parameters: ToolsToggleParams,
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-      execute: async (toolCallId, params, signal, onUpdate, ctx) => handleToolsToggle(params.enabled),
+      execute: async (toolCallId, params, signal, onUpdate, ctx) => {
+        handleToolsToggle(params.enabled);
+        reRegisterTools(params.enabled ? "direct" : "hidden");
+      },
     }, locked ? "hidden" : "direct");
   }
 
@@ -215,22 +206,15 @@ export default function (pi: ExtensionAPI): void {
     exposure: "hidden",
     namespace: COPILOT_PLUGINS_NAMESPACE,
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    execute: async (toolCallId, params, signal, onUpdate, ctx) => handleToolsToggle(params.enabled),
+    execute: async (toolCallId, params, signal, onUpdate, ctx) => {
+      handleToolsToggle(params.enabled);
+      reRegisterTools(params.enabled ? "direct" : "hidden");
+    },
   });
 
   // Restore lock state if it was locked (hide toggle tool)
   if (wasLocked) {
     reRegisterToolsForLock(true);
-  }
-
-  // ─── Tools Toggle Handler ──────────────────────────────────────────────────
-
-  function handleToolsToggle(enabled: boolean): import("@earendil-works/pi-coding-agent").AgentToolResult {
-    setToolEnabled("copilot_plugins_tools_toggle", enabled);
-    reRegisterTools(enabled ? "direct" : "hidden");
-    return {
-      content: [{ type: "text", text: enabled ? "✓ Copilot tools enabled. All 14 tools are now available." : "✓ Copilot tools disabled. Tools hidden to save context." }],
-    };
   }
 
   // ─── reRegisterTools ──────────────────────────────────────────────────────
@@ -429,6 +413,10 @@ export default function (pi: ExtensionAPI): void {
       execute: async (toolCallId, params, signal, onUpdate, ctx) => handleMarketplaceRemove(params.name),
     }, exposure);
   }
+
+  // Assign module-scope callbacks so handleSlashCommand can call them
+  _reRegisterTools = reRegisterTools;
+  _reRegisterToolsForLock = reRegisterToolsForLock;
 }
 
 // ─── Slash Command Handler ──────────────────────────────────────────────────
@@ -781,6 +769,31 @@ async function handleSlashCommand(args: string, ctx: ExtensionCommandContext): P
   } catch (err: any) {
     ui.notify(`✗ Error: ${err.message}`, "error");
   }
+}
+
+// ─── Module-scope callbacks for tool visibility changes ─────────────────────
+
+let _reRegisterTools: ((exposure: "direct" | "hidden") => void) | null = null;
+let _reRegisterToolsForLock: ((locked: boolean) => void) | null = null;
+
+// ─── Tools Lock/Unlock Handlers (module scope for slash command access) ────
+
+function handleToolsLock(): void {
+  lockTools();
+  if (_reRegisterToolsForLock) _reRegisterToolsForLock(true);
+}
+
+function handleToolsUnlock(): void {
+  unlockTools();
+  if (_reRegisterToolsForLock) _reRegisterToolsForLock(false);
+}
+
+function handleToolsToggle(enabled: boolean): import("@earendil-works/pi-coding-agent").AgentToolResult {
+  setToolEnabled("copilot_plugins_tools_toggle", enabled);
+  if (_reRegisterTools) _reRegisterTools(enabled ? "direct" : "hidden");
+  return {
+    content: [{ type: "text", text: enabled ? "✓ Copilot tools enabled. All 14 tools are now available." : "✓ Copilot tools disabled. Tools hidden to save context." }],
+  };
 }
 
 // ─── Tool Handlers ──────────────────────────────────────────────────────────
