@@ -657,10 +657,10 @@ async function handleSlashCommand(args: string, ctx: ExtensionCommandContext): P
           ui.notify("✓ Copilot tools disabled.", "success");
         } else if (sub === "lock") {
           handleToolsLock();
-          ui.notify("✓ Copilot tools locked. All tools hidden.", "success");
+          ui.notify("✓ Copilot tools locked. Tool `copilot_plugins_tools_toggle` disabled.", "success");
         } else if (sub === "unlock") {
           handleToolsUnlock();
-          ui.notify("✓ Copilot tools unlocked. Toggle tool restored.", "success");
+          ui.notify("✓ Copilot tools unlocked. Tool `copilot_plugins_tools_toggle` enabled.", "success");
         } else {
           ui.notify("Usage: /copilot-plugins tools [enable|disable|lock|unlock]\nRun /copilot-plugins tools (no args) to see current status.", "error");
         }
