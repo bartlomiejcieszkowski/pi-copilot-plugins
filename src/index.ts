@@ -180,7 +180,6 @@ export default function (pi: ExtensionAPI): void {
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
       execute: async (toolCallId, params, signal, onUpdate, ctx) => {
         handleToolsToggle(params.enabled);
-        reRegisterTools(params.enabled ? "direct" : "hidden");
       },
     }, locked ? "hidden" : "direct");
   }
