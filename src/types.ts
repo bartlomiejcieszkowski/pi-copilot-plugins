@@ -1,7 +1,7 @@
 // ─── Plugin Manifest Types ───────────────────────────────────────────────────
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
-import { dirname, join, normalize } from "node:path";
+import { dirname, join } from "node:path";
 
 /** Agent Plugins 1.0 / 1.1 manifest */
 export interface AgentPluginsManifest {
@@ -158,7 +158,7 @@ export interface PluginRegistry {
 /** Plugin configuration (secrets, preferences) */
 export interface PluginConfig {
   githubToken?: string;
-  tools?: Record<string, boolean>;
+  toolsEnabled?: boolean;
   toolsLocked?: boolean;
 }
 
@@ -194,37 +194,21 @@ export function getDefaultToolState(): Record<string, boolean> {
 }
 
 /**
- * Get tool enabled state from config, falling back to defaults.
+ * Set the default tool state (persisted in config).
  */
-export function getToolState(): Record<string, boolean> {
-  try {
-    const registry = readFileSync(COPILOT_PLUGINS_JSON, "utf-8");
-    const parsed = JSON.parse(registry) as PluginRegistry;
-    if (parsed.config?.tools) {
-      // Merge with defaults so any missing tools use default (disabled)
-      const merged: Record<string, boolean> = { ...getDefaultToolState() };
-      for (const name of TOOL_NAMES) {
-        if (parsed.config!.tools![name] !== undefined) {
-          merged[name] = parsed.config!.tools![name]!;
-        }
-      }
-      return merged;
-    }
-  } catch {
-    // Config file doesn't exist or is invalid — fall through to defaults
-  }
-  return getDefaultToolState();
+export function setToolsEnabled(enabled: boolean): void {
+  const parsed = readOrCreateConfig();
+  if (!parsed.config) parsed.config = {};
+  parsed.config.toolsEnabled = enabled;
+  writeFileSync(COPILOT_PLUGINS_JSON, JSON.stringify(parsed, null, 2));
 }
 
 /**
- * Enable or disable a tool in the config.
+ * Check if tools are enabled by default.
  */
-export function setToolEnabled(name: string, enabled: boolean): void {
+export function isToolsEnabled(): boolean {
   const parsed = readOrCreateConfig();
-  if (!parsed.config) parsed.config = {};
-  if (!parsed.config.tools) parsed.config.tools = {};
-  parsed.config.tools[name] = enabled;
-  writeFileSync(COPILOT_PLUGINS_JSON, JSON.stringify(parsed, null, 2));
+  return !!parsed.config?.toolsEnabled;
 }
 
 /**
@@ -234,6 +218,7 @@ export function lockTools(): void {
   const parsed = readOrCreateConfig();
   if (!parsed.config) parsed.config = {};
   parsed.config.toolsLocked = true;
+  parsed.config.toolsEnabled = false; // lock implies disabled
   writeFileSync(COPILOT_PLUGINS_JSON, JSON.stringify(parsed, null, 2));
 }
 
@@ -276,7 +261,7 @@ export function createDefaultConfig(): PluginRegistry {
     },
     plugins: {},
     config: {
-      tools: {},
+      toolsEnabled: true,
       toolsLocked: false,
     },
   };

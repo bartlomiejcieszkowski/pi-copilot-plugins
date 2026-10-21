@@ -9,7 +9,7 @@ import type { PluginSpec } from "./types.js";
 import { listMarketplacePlugins, findPluginInMarketplace, searchMarketplacePlugins, marketplacePluginToSpec, fetchMarketplace } from "./marketplace.js";
 import { installPluginPackage, uninstallPluginPackage, reinstallPluginPackage, updatePluginPackage, peekManifest, peekSkills } from "./installer.js";
 import { listPlugins, enablePlugin, disablePlugin, getMarketplace, getPlugin, uninstallPlugin, registerMarketplace, unregisterMarketplace, listMarketplaces } from "./registry.js";
-import { getToolState, setToolEnabled, TOOL_NAMES, lockTools, unlockTools, isToolsLocked } from "./types.js";
+import { getToolState, setToolEnabled, TOOL_NAMES, lockTools, unlockTools, isToolsLocked, setToolsEnabled, isToolsEnabled } from "./types.js";
 
 // ─── TypeBox Schemas ────────────────────────────────────────────────────────
 
@@ -160,7 +160,15 @@ export default function (pi: ExtensionAPI): void {
 
   // ─── Initial Registration: all tools hidden ──────────────────────────────
 
-  reRegisterTools("hidden");
+  // Load persisted state from config
+  const config = readOrCreateConfig();
+  const toolsEnabled = config.config?.toolsEnabled ?? true;
+  const toolsLocked = config.config?.toolsLocked ?? false;
+
+  reRegisterTools(toolsEnabled ? "direct" : "hidden");
+  if (toolsLocked) {
+    reRegisterToolsForLock(true);
+  }
 
   // ─── Tools Lock/Unlock ─────────────────────────────────────────────────────
 
@@ -649,6 +657,27 @@ async function handleSlashCommand(args: string, ctx: ExtensionCommandContext): P
           return;
         }
         const sub = rest[0];
+        if (sub === "default") {
+          const action = rest[1];
+          if (action === "enable") {
+            setToolsEnabled(true);
+            ui.notify("✓ Default tool state set to enabled.", "success");
+          } else if (action === "disable") {
+            setToolsEnabled(false);
+            ui.notify("✓ Default tool state set to disabled.", "success");
+          } else if (action === "lock") {
+            setToolsEnabled(false);
+            lockTools();
+            ui.notify("✓ Default state set to locked (tools disabled).", "success");
+          } else if (action === "unlock") {
+            setToolsEnabled(true);
+            unlockTools();
+            ui.notify("✓ Default state set to unlocked (tools enabled).", "success");
+          } else {
+            ui.notify("Usage: /copilot-plugins tools default {enable|disable|lock|unlock}", "error");
+          }
+          return;
+        }
         if (sub === "enable") {
           handleToolsToggle(true);
           ui.notify("✓ Copilot tools enabled.", "success");
