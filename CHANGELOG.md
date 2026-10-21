@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] — 2026-10-21
+
+### Fixed
+- Tool toggle scope: lock/unlock only controls toggle tool visibility, enable/disable only controls 14 tools visibility (two independent axes)
+- Config-based exposure at startup: read config first, register tools with correct exposure (not hardcoded hidden then re-register)
+- Missing `return` in toggle tool execute handlers — tools now respond correctly
+- Duplicate toggle tool registration removed
+- Tools status display: use `isToolsEnabled()`/`isToolsLocked()` booleans instead of per-tool `getToolState()` object
+- Tools default subcommand: call `handleToolsLock/Unlock/handleToolsToggle` for immediate effect instead of just `setToolEnabled`
+- Updated lock/unlock messages to reflect scope (only toggle tool affected by lock/unlock)
+
+### Changed
+- Updated `undici` from ^8.11.2 to ^8.12.2
+- Updated `vitest` from ^5.0.4 to ^5.0.5
+- Updated `@vitest/coverage-v8` from ^5.0.4 to ^5.0.5
+
 ## [1.0.0] — 2026-10-19
 
 ### Changed
