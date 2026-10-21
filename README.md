@@ -208,7 +208,7 @@ export GITHUB_TOKEN=ghp_your_token_here
 
 **Option 2: Config file (takes precedence)**
 
-Add a `config` section to your plugin registry file (`~/.pi/agent/copilot-plugins.json`):
+Add a `config` section to your plugin registry file (`~/.pi/agent/pi-copilot-plugins.json`):
 
 ```json
 {
