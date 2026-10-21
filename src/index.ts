@@ -9,7 +9,7 @@ import type { PluginSpec } from "./types.js";
 import { listMarketplacePlugins, findPluginInMarketplace, searchMarketplacePlugins, marketplacePluginToSpec, fetchMarketplace } from "./marketplace.js";
 import { installPluginPackage, uninstallPluginPackage, reinstallPluginPackage, updatePluginPackage, peekManifest, peekSkills } from "./installer.js";
 import { listPlugins, enablePlugin, disablePlugin, getMarketplace, getPlugin, uninstallPlugin, registerMarketplace, unregisterMarketplace, listMarketplaces } from "./registry.js";
-import { getToolState, setToolEnabled, TOOL_NAMES, lockTools, unlockTools, isToolsLocked, setToolsEnabled, isToolsEnabled } from "./types.js";
+import { TOOL_NAMES, lockTools, unlockTools, isToolsLocked, setToolsEnabled, isToolsEnabled, readOrCreateConfig } from "./types.js";
 
 // ─── TypeBox Schemas ────────────────────────────────────────────────────────
 
@@ -157,18 +157,10 @@ export default function (pi: ExtensionAPI): void {
     },
   });
 
-
-  // ─── Initial Registration: all tools hidden ──────────────────────────────
-
   // Load persisted state from config
   const config = readOrCreateConfig();
   const toolsEnabled = config.config?.toolsEnabled ?? true;
   const toolsLocked = config.config?.toolsLocked ?? false;
-
-  reRegisterTools(toolsEnabled ? "direct" : "hidden");
-  if (toolsLocked) {
-    reRegisterToolsForLock(true);
-  }
 
   // ─── Tools Lock/Unlock ─────────────────────────────────────────────────────
 
@@ -187,19 +179,15 @@ export default function (pi: ExtensionAPI): void {
       parameters: ToolsToggleParams,
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
       execute: async (toolCallId, params, signal, onUpdate, ctx) => {
-        handleToolsToggle(params.enabled);
+        return handleToolsToggle(params.enabled);
       },
     }, locked ? "hidden" : "direct");
   }
 
   // ─── Tools Toggle Tool ─────────────────────────────────────────────────────
 
-  // Check if tools were previously locked
-  const wasLocked = isToolsLocked();
-
-  // Register toggle tool first (hidden by default)
-  pi.registerTool({
-    name: "copilot_plugins_tools_toggle",
+  // Register toggle tool with correct exposure from config
+  registerToolWithExposure(pi, "copilot_plugins_tools_toggle", {
     label: "Toggle Copilot Tools",
     description: "Enable or disable all Copilot plugin tools. When disabled, tools are hidden from the model to save context. When enabled, all 14 tools become available for the model to use.",
     promptSnippet: "Toggle Copilot plugin tools on/off",
@@ -210,19 +198,11 @@ export default function (pi: ExtensionAPI): void {
       "Disable tools again after you're done to save context",
     ],
     parameters: ToolsToggleParams,
-    exposure: "hidden",
-    namespace: COPILOT_PLUGINS_NAMESPACE,
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     execute: async (toolCallId, params, signal, onUpdate, ctx) => {
-      handleToolsToggle(params.enabled);
-      reRegisterTools(params.enabled ? "direct" : "hidden");
+      return handleToolsToggle(params.enabled);
     },
-  });
-
-  // Restore lock state if it was locked (hide toggle tool)
-  if (wasLocked) {
-    reRegisterToolsForLock(true);
-  }
+  }, toolsLocked ? "hidden" : "direct");
 
   // ─── reRegisterTools ──────────────────────────────────────────────────────
 
@@ -636,21 +616,20 @@ async function handleSlashCommand(args: string, ctx: ExtensionCommandContext): P
       case "tools": {
         if (!rest.length) {
           // Show current tool state
-          const state = getToolState();
-          const enabled = Object.entries(state).filter(([, v]) => v);
-          const disabled = Object.entries(state).filter(([, v]) => !v);
-          let output = "Copilot tools status:\n\n";
-          if (enabled.length) {
-            output += "Enabled:\n";
-            for (const [name] of enabled) {
-              output += `  ✓ ${name}\n`;
+          const enabled = isToolsEnabled();
+          const locked = isToolsLocked();
+          let output = "pi-copilot-plugins tools status:\n\n";
+          output += `Tools: ${enabled ? "Enabled" : "Disabled"}\n`;
+          output += `Lock: ${locked ? "Locked" : "Unlocked"}\n`;
+          if (enabled || !locked) {
+            output += "\nActive tools:\n";
+            if (!locked) {
+              output += `  ✓ copilot_plugins_tools_toggle\n`;
             }
-            output += "\n";
-          }
-          if (disabled.length) {
-            output += "Disabled:\n";
-            for (const [name] of disabled) {
-              output += `  ✗ ${name}\n`;
+            if (enabled) {
+              for (const name of TOOL_NAMES) {
+                output += `  ✓ ${name}\n`;
+              }
             }
           }
           ui.notify(output.trim(), "info");
@@ -661,18 +640,20 @@ async function handleSlashCommand(args: string, ctx: ExtensionCommandContext): P
           const action = rest[1];
           if (action === "enable") {
             setToolsEnabled(true);
-            ui.notify("✓ Default tool state set to enabled.", "success");
+            handleToolsToggle(true);
+            ui.notify("✓ Default tool state set to enabled. Tools now enabled.", "success");
           } else if (action === "disable") {
             setToolsEnabled(false);
-            ui.notify("✓ Default tool state set to disabled.", "success");
+            handleToolsToggle(false);
+            ui.notify("✓ Default tool state set to disabled. Tools now disabled.", "success");
           } else if (action === "lock") {
-            setToolsEnabled(false);
             lockTools();
-            ui.notify("✓ Default state set to locked (tools disabled).", "success");
+            handleToolsLock();
+            ui.notify("✓ Default state set to locked. Toggle tool hidden. Tools now disabled.", "success");
           } else if (action === "unlock") {
-            setToolsEnabled(true);
             unlockTools();
-            ui.notify("✓ Default state set to unlocked (tools enabled).", "success");
+            handleToolsUnlock();
+            ui.notify("✓ Default state set to unlocked. Toggle tool visible. Tools now enabled.", "success");
           } else {
             ui.notify("Usage: /copilot-plugins tools default {enable|disable|lock|unlock}", "error");
           }
@@ -817,10 +798,10 @@ function handleToolsUnlock(): void {
 }
 
 function handleToolsToggle(enabled: boolean): import("@earendil-works/pi-coding-agent").AgentToolResult {
-  setToolEnabled("copilot_plugins_tools_toggle", enabled);
   if (_reRegisterTools) _reRegisterTools(enabled ? "direct" : "hidden");
   return {
     content: [{ type: "text", text: enabled ? "✓ Copilot tools enabled. All 14 tools are now available." : "✓ Copilot tools disabled. Tools hidden to save context." }],
+    isError: false,
   };
 }
 
