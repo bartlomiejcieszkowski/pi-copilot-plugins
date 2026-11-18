@@ -222,6 +222,18 @@ Add a `config` section to your plugin registry file (`~/.pi/agent/pi-copilot-plu
 
 The config file token takes precedence over environment variables. This is useful for sharing configuration across sessions or environments without relying on shell environment setup.
 
+### Marketplace Branches
+
+Marketplace catalogs are read from `.github/plugin/marketplace.json` on the repository's default branch. The extension resolves the ref in this order:
+
+1. `HEAD` — resolves to the repository default branch, whatever its name
+2. `main`
+3. `master`
+
+`main` and `master` are fallbacks for hosts that do not resolve `HEAD`. A ref is skipped on HTTP 404 or network error. Other HTTP errors (for example 401 or 403) are reported immediately, so token problems stay visible.
+
+This means marketplaces on `master`, or on a default branch with a non-standard name, load without extra configuration.
+
 ## Architecture
 
 ```

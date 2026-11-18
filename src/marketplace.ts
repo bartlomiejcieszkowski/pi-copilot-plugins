@@ -71,6 +71,12 @@ function cacheMarketplace(source: string, manifest: MarketplaceManifest): void {
  * Fetch a marketplace manifest from a GitHub repository.
  * Uses local cache if available. Returns { manifest, stale }.
  * Stale means cache is older than 24h — still returned but user is warned.
+ *
+ * The repository's default branch is resolved automatically through the 'HEAD'
+ * raw ref, so repositories on main, master, or any other default branch work.
+ * If 'HEAD' fails, 'main' and then 'master' are tried. A ref is skipped on
+ * HTTP 404 or network error; any other HTTP status aborts the fetch.
+ *
  * @param force - If true, bypass cache and always fetch from network.
  */
 export async function fetchMarketplace(source: string, force = false): Promise<{ manifest: MarketplaceManifest; stale: boolean }> {
@@ -90,28 +96,43 @@ export async function fetchMarketplace(source: string, force = false): Promise<{
   const token = getGitHubToken();
   if (token) headers["Authorization"] = `token ${token}`;
 
-  // Try the standard marketplace.json location
-  const url = `https://raw.githubusercontent.com/${owner}/${repo}/main/.github/plugin/marketplace.json`;
+  // 'HEAD' resolves to the default branch; main and master remain as fallbacks
+  const refs = ["HEAD", "main", "master"];
 
-  let response: Response;
-  try {
-    response = await fetch(url, { headers });
-  } catch {
-    // Try 'master' branch as fallback
-    const urlMaster = `https://raw.githubusercontent.com/${owner}/${repo}/master/.github/plugin/marketplace.json`;
-    response = await fetch(urlMaster, { headers });
+  const attempted: string[] = [];
+  let lastError = "unknown error";
+
+  for (const ref of refs) {
+    attempted.push(ref);
+    const url = `https://raw.githubusercontent.com/${owner}/${repo}/${ref}/.github/plugin/marketplace.json`;
+
+    let response: Response;
+    try {
+      response = await fetch(url, { headers });
+    } catch (err) {
+      // Network failure — try the next ref
+      lastError = err instanceof Error ? err.message : String(err);
+      continue;
+    }
+
+    if (response.ok) {
+      const manifest = (await response.json()) as MarketplaceManifest;
+
+      // Cache the result
+      cacheMarketplace(source, manifest);
+
+      return { manifest, stale: false };
+    }
+
+    if (response.status !== 404) {
+      // Auth or server error — do not mask it with another ref attempt
+      throw new Error(`Failed to fetch marketplace from ${source}: HTTP ${response.status} (ref: ${ref})`);
+    }
+
+    lastError = `HTTP 404 on ref "${ref}"`;
   }
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch marketplace from ${source}: HTTP ${response.status}`);
-  }
-
-  const manifest = (await response.json()) as MarketplaceManifest;
-
-  // Cache the result
-  cacheMarketplace(source, manifest);
-
-  return { manifest, stale: false };
+  throw new Error(`Failed to fetch marketplace from ${source} (tried ${attempted.join(", ")}): ${lastError}`);
 }
 
 /**
