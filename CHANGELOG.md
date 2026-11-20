@@ -5,10 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.2] — 2026-11-20
 
 ### Fixed
 - Marketplace fetch falls back to `master` when `main` returns HTTP 404 (#15)
+- Registry writes use a temp file named per process and retry the rename when another process still holds the target open (Windows `EPERM`)
+- Test workers get their own `PI_TEST_DIR` instead of sharing one, which made the registry test flaky under parallel execution
+
+### Changed
+- Updated `undici` from ^8.12.2 to ^8.12.4
+- Updated `vitest` from ^5.0.5 to ^5.1.0
+- Updated `@vitest/coverage-v8` from ^5.0.5 to ^5.1.0
+- Updated `@types/node` from ^26.6.5 to ^26.6.6
 
 ## [1.0.1] — 2026-10-21
 
