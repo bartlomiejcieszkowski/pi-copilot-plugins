@@ -9,6 +9,7 @@ import type {
 } from "./types.js";
 import {
   COPILOT_PLUGINS_JSON,
+  COPILOT_PLUGINS_JSON_NAME,
   PLUGIN_CACHE_DIR,
   PLUGIN_DATA_DIR,
   readOrCreateConfig,
@@ -46,8 +47,26 @@ export function writeRegistry(registry: PluginRegistry): void {
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }
-  const tmpFile = join(dir, "pi-copilot-plugins.json.tmp");
+
+  // Unique per process so concurrent writers (two Pi sessions, or parallel test
+  // workers) never collide on the same temp file.
+  const tmpFile = join(dir, `${COPILOT_PLUGINS_JSON_NAME}.${process.pid}.tmp`);
   writeFileSync(tmpFile, newContent, "utf-8");
+
+  // On Windows, renaming over a file another process still holds open fails with
+  // EPERM; retry briefly before giving up.
+  const sleep = new Int32Array(new SharedArrayBuffer(4));
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      renameSync(tmpFile, COPILOT_PLUGINS_JSON);
+      return;
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code !== "EPERM" && code !== "EBUSY") throw err;
+      Atomics.wait(sleep, 0, 0, 20);
+    }
+  }
+
   renameSync(tmpFile, COPILOT_PLUGINS_JSON);
 }
 
