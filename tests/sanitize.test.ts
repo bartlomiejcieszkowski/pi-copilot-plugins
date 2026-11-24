@@ -9,6 +9,10 @@ describe("validateGitUrl", () => {
     expect(validateGitUrl("https://github.com/acme/plugin.git")).toBe("https://github.com/acme/plugin.git");
   });
 
+  it("rejects an http clone url", () => {
+    expect(() => validateGitUrl("http://git.internal.example/acme/plugin.git")).toThrow(/Unsafe git url/);
+  });
+
   it("accepts an ssh clone url", () => {
     expect(validateGitUrl("ssh://git@github.com/acme/plugin.git")).toBe("ssh://git@github.com/acme/plugin.git");
   });

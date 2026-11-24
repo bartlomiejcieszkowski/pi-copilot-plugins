@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `owner/repo` sources from marketplace manifests must match `owner/repo` before being interpolated into GitHub urls or API paths
 
 ### Changed
-- Git clone urls are limited to `https://` and `ssh://`; plain `http://` clone urls are now rejected
+- Git clone urls are limited to `https://` and `ssh://` (plus the scp-like ssh form); plain `http://`, bare or command-bearing strings are rejected before they reach git
 
 ### Fixed
 - Marketplace plugins that declare `metadata.pluginRoot` now resolve relative sources inside the marketplace repository instead of cloning an unrelated `owner/repo` GitHub repository
