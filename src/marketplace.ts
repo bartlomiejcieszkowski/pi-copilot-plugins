@@ -4,6 +4,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { PI_AGENT_DIR } from "./types.js";
 import { getGitHubToken } from "./types.js";
+import { validateGitUrl, isSafeRepoSlug } from "./sanitize.js";
 
 const DEFAULT_MARKETPLACE = "copilot-plugins";
 const DEFAULT_MARKETPLACE_SOURCE = "github/copilot-plugins";
@@ -186,14 +187,22 @@ export function isMarketplaceRegistered(name: string): boolean {
 
 /**
  * Normalize a repository-relative path.
- * Converts backslashes, strips leading "./" and slashes, and removes trailing slashes.
+ * Converts backslashes, strips leading "./" and slashes, removes trailing slashes,
+ * and rejects parent-directory segments: these paths come from a remote
+ * marketplace manifest and are joined onto the plugin cache directory later.
  */
 export function normalizeRepoPath(path: string): string {
-  return path
+  const normalized = path
     .replace(/\\/g, "/")
     .replace(/^\.\/+/, "")
     .replace(/^\/+/, "")
     .replace(/\/+$/, "");
+
+  if (normalized.split("/").includes("..")) {
+    throw new Error(`Unsafe marketplace path: parent directory segments are not allowed ("${path}")`);
+  }
+
+  return normalized;
 }
 
 /**
@@ -236,6 +245,9 @@ export function marketplacePluginToSpec(
 
     if (isStandaloneRepo) {
       // Standalone GitHub repo
+      if (!isSafeRepoSlug(rawSource)) {
+        throw new Error(`Unsafe marketplace repo reference: expected "owner/repo" ("${rawSource}")`);
+      }
       source = { type: "github", repo: rawSource };
     } else {
       // Relative path within the marketplace repo, anchored at pluginRoot
@@ -244,9 +256,13 @@ export function marketplacePluginToSpec(
   } else if (typeof plugin.source === "object" && plugin.source && "source" in plugin.source) {
     const ms = plugin.source as { source: string; repo?: string; url?: string; path?: string; ref?: string; sha?: string };
     if (ms.source === "github" && ms.repo) {
+      if (!isSafeRepoSlug(ms.repo)) {
+        throw new Error(`Unsafe marketplace repo reference: expected "owner/repo" ("${ms.repo}")`);
+      }
       source = { type: "github", repo: ms.repo, path: ms.path };
     } else if (ms.source === "url" && ms.url) {
-      source = { type: "git", url: ms.url };
+      // Remote input reaches `git clone` — validate before it becomes a spec.
+      source = { type: "git", url: validateGitUrl(ms.url) };
     } else {
       source = { type: "local", path: JSON.stringify(plugin.source) };
     }

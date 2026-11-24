@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- Marketplace `{"source": "url"}` entries are validated before use, so a manifest can no longer pass git's `ext::` transport (or shell syntax) to `git clone` and execute commands
+- `git clone` and `git rev-parse` run through `execFile` with an argument array instead of a shell string, so urls and cache paths are never re-parsed by a shell
+- Marketplace sources containing `..` segments are rejected instead of resolved above the plugin cache, and a plugin sub path that escapes the cache directory is rejected before cloning
+- `owner/repo` sources from marketplace manifests must match `owner/repo` before being interpolated into GitHub urls or API paths
+
+### Changed
+- Git clone urls are limited to `https://` and `ssh://`; plain `http://` clone urls are now rejected
+
 ### Fixed
 - Marketplace plugins that declare `metadata.pluginRoot` now resolve relative sources inside the marketplace repository instead of cloning an unrelated `owner/repo` GitHub repository
 - `install name@marketplace` now clones the marketplace source (not the registered marketplace name)

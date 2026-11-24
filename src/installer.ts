@@ -29,10 +29,11 @@ import {
   uninstallPlugin,
 } from "./registry.js";
 import { createHash } from "node:crypto";
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { status, statusDone, statusSimple, stopSpinner } from "./progress.js";
 import { bold, cyan, gray, yellow } from "./colors.js";
 import { validateManifest } from "./validator.js";
+import { validateGitUrl, resolveSubPathUnder } from "./sanitize.js";
 import { tmpdir } from "node:os";
 import {
   readFileSync,
@@ -293,6 +294,13 @@ async function gitClone(
   pluginName: string,
   subPath?: string
 ): Promise<{ cacheDir: string; sha: string }> {
+  // Reject urls and sub paths that could execute something or escape the cache
+  // before any network or filesystem work happens.
+  const safeUrl = validateGitUrl(url);
+  if (subPath) {
+    resolveSubPathUnder(PLUGIN_CACHE_DIR, subPath);
+  }
+
   // Create cache directory
   mkdirSync(PLUGIN_CACHE_DIR, { recursive: true });
 
@@ -310,7 +318,7 @@ async function gitClone(
     if (existsSync(cacheDir)) {
       rmSync(cacheDir, { recursive: true, force: true });
     }
-    execSync(`git clone --depth 1 ${url} "${cacheDir}"`, {
+    execFileSync("git", ["clone", "--depth", "1", "--", safeUrl, cacheDir], {
       stdio: "pipe",
     });
     stop();
@@ -322,7 +330,7 @@ async function gitClone(
   // Get the commit SHA
   let sha: string;
   try {
-    sha = execSync("git rev-parse HEAD", {
+    sha = execFileSync("git", ["rev-parse", "HEAD"], {
       cwd: cacheDir,
       encoding: "utf-8",
     }).trim();
@@ -333,7 +341,7 @@ async function gitClone(
   // If subPath is specified, we need to handle it
   // For now, the cacheDir points to the repo root; the caller should use cacheDir/subPath
   if (subPath) {
-    const fullPath = join(cacheDir, subPath);
+    const fullPath = resolveSubPathUnder(cacheDir, subPath);
     if (!existsSync(fullPath)) {
       throw new Error(`Sub-path ${subPath} not found in ${url}`);
     }
