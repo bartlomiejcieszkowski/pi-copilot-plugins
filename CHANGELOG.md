@@ -5,23 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.3] — 2026-11-24
 
 ### Security
-- Marketplace `{"source": "url"}` entries are validated before use, so a manifest can no longer pass git's `ext::` transport (or shell syntax) to `git clone` and execute commands
-- `git clone` and `git rev-parse` run through `execFile` with an argument array instead of a shell string, so urls and cache paths are never re-parsed by a shell
-- Marketplace sources containing `..` segments are rejected instead of resolved above the plugin cache, and a plugin sub path that escapes the cache directory is rejected before cloning
-- `owner/repo` sources from marketplace manifests must match `owner/repo` before being interpolated into GitHub urls or API paths
+- Marketplace `{"source": "url"}` entries are validated before use, so a manifest can no longer pass git's `ext::` transport (or shell syntax) to `git clone` and execute commands (#23)
+- `git clone` and `git rev-parse` run through `execFile` with an argument array instead of a shell string, so urls and cache paths are never re-parsed by a shell (#23)
+- Marketplace sources containing `..` segments are rejected instead of resolved above the plugin cache, and a plugin sub path that escapes the cache directory is rejected before cloning (#23)
+- `owner/repo` sources from marketplace manifests must match `owner/repo` before being interpolated into GitHub urls or API paths (#23)
 
 ### Changed
-- Git clone urls are limited to `https://` and `ssh://` (plus the scp-like ssh form); plain `http://`, bare or command-bearing strings are rejected before they reach git
+- Git clone urls are limited to `https://` and `ssh://` (plus the scp-like ssh form); plain `http://`, bare or command-bearing strings are rejected before they reach git (#23)
+- Updated `undici` from ^8.12.4 to ^8.13.1
 
 ### Fixed
-- Marketplace plugins that declare `metadata.pluginRoot` now resolve relative sources inside the marketplace repository instead of cloning an unrelated `owner/repo` GitHub repository
-- `install name@marketplace` now clones the marketplace source (not the registered marketplace name)
-- Peek reports manifest read/validation errors separately from missing catalog entries
-- Peek and install read manifests from `.github/plugin/plugin.json`, `.plugin/plugin.json`, and `.claude-plugin/plugin.json` inside the plugin directory
-- `update --all` uses the registry source (including the resolved plugin path and scope) instead of the flattened repository name
+- Marketplace plugins that declare `metadata.pluginRoot` now resolve relative sources inside the marketplace repository instead of cloning an unrelated `owner/repo` GitHub repository (#22)
+- `install name@marketplace` now clones the marketplace source (not the registered marketplace name) (#22)
+- Peek reports manifest read/validation errors separately from missing catalog entries (#22)
+- Peek and install read manifests from `.github/plugin/plugin.json`, `.plugin/plugin.json`, and `.claude-plugin/plugin.json` inside the plugin directory (#22)
+- `update --all` uses the registry source (including the resolved plugin path and scope) instead of the flattened repository name (#22)
 
 ## [1.0.2] — 2026-11-20
 
