@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Git urls carrying a query or fragment (for example `?sshCommand=...`) are rejected, because git reads them as configuration and the ssh transport executes `sshCommand` (#29)
 - `git clone` pins `protocol.ext.allow` and `protocol.file.allow` to `never`, clears `credential.helper`, and runs with `GIT_PROTOCOL_FROM_USER=0` and `GIT_TERMINAL_PROMPT=0` (#29)
 
+### Changed
+
+- Prettier is now a dev dependency with a committed config (`printWidth: 120`, double quotes, `trailingComma: "es5"`), `npm run format` / `npm run format:check` scripts, and a `Format check` step in CI; sources, tests, fixtures and README were reformatted once so later diffs stay semantic
+
 ## [1.0.3] — 2026-11-24
 
 ### Security
