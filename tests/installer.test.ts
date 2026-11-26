@@ -1,20 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import {
-  readFileSync,
-  mkdtempSync,
-  mkdirSync,
-  writeFileSync,
-  rmSync,
-} from "fs";
+import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { isAgentPlugins, SKILLS_DIR, PI_AGENT_DIR } from "../src/types.js";
-import {
-  readManifest,
-  peekManifestResult,
-  downloadPlugin,
-  installPluginPackage,
-} from "../src/installer.js";
+import { readManifest, peekManifestResult, downloadPlugin, installPluginPackage } from "../src/installer.js";
 import { fetch as undiciFetch } from "undici";
 
 vi.mock("undici", () => ({ fetch: vi.fn() }));
@@ -23,10 +12,10 @@ const FIXTURES = join(__dirname, "fixtures");
 const fetchMock = vi.mocked(undiciFetch);
 
 function encodedJson(value: unknown): Response {
-  return new Response(
-    JSON.stringify({ content: Buffer.from(JSON.stringify(value)).toString("base64") }),
-    { status: 200, headers: { "Content-Type": "application/json" } }
-  );
+  return new Response(JSON.stringify({ content: Buffer.from(JSON.stringify(value)).toString("base64") }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
 beforeEach(() => {
@@ -41,9 +30,7 @@ afterEach(() => {
 
 describe("readManifest", () => {
   it("reads legacy manifest with skills but no mcpServers", () => {
-    const manifest = JSON.parse(
-      readFileSync(join(FIXTURES, "failing-manifest.json"), "utf-8")
-    );
+    const manifest = JSON.parse(readFileSync(join(FIXTURES, "failing-manifest.json"), "utf-8"));
     // Should be detected as legacy (has skills, no $schema)
     expect(isAgentPlugins(manifest)).toBe(false);
     // Should have skills array from manifest
@@ -55,9 +42,7 @@ describe("readManifest", () => {
   });
 
   it("reads legacy manifest with skills and mcpServers", () => {
-    const manifest = JSON.parse(
-      readFileSync(join(FIXTURES, "legacy-plugin.json"), "utf-8")
-    );
+    const manifest = JSON.parse(readFileSync(join(FIXTURES, "legacy-plugin.json"), "utf-8"));
     expect(isAgentPlugins(manifest)).toBe(false);
     expect(manifest.skills).toEqual(["skills/deploy"]);
     // Legacy format: mcpServers can be a string path
@@ -65,9 +50,7 @@ describe("readManifest", () => {
   });
 
   it("reads Agent Plugins 1.0 manifest", () => {
-    const manifest = JSON.parse(
-      readFileSync(join(FIXTURES, "agent-plugins-1.0.json"), "utf-8")
-    );
+    const manifest = JSON.parse(readFileSync(join(FIXTURES, "agent-plugins-1.0.json"), "utf-8"));
     expect(isAgentPlugins(manifest)).toBe(true);
   });
 
@@ -182,16 +165,8 @@ describe("installPluginPackage skills", () => {
       "---\nname: " + skillName + "\ndescription: An example skill.\n---\n",
       "utf-8"
     );
-    writeFileSync(
-      join(sourceSkillDir, "references", "guide.md"),
-      "Guide content",
-      "utf-8"
-    );
-    writeFileSync(
-      join(pluginRoot, "plugin.json"),
-      JSON.stringify({ name: skillName, skills: ["skills"] }),
-      "utf-8"
-    );
+    writeFileSync(join(sourceSkillDir, "references", "guide.md"), "Guide content", "utf-8");
+    writeFileSync(join(pluginRoot, "plugin.json"), JSON.stringify({ name: skillName, skills: ["skills"] }), "utf-8");
 
     const destSkillDir = join(SKILLS_DIR, skillName);
     mkdirSync(PI_AGENT_DIR, { recursive: true });
@@ -204,12 +179,8 @@ describe("installPluginPackage skills", () => {
 
       expect(result.success, JSON.stringify(result.errors)).toBe(true);
       expect(result.skills).toEqual([skillName]);
-      expect(readFileSync(join(destSkillDir, "SKILL.md"), "utf-8")).toContain(
-        skillName
-      );
-      expect(
-        readFileSync(join(destSkillDir, "references", "guide.md"), "utf-8")
-      ).toBe("Guide content");
+      expect(readFileSync(join(destSkillDir, "SKILL.md"), "utf-8")).toContain(skillName);
+      expect(readFileSync(join(destSkillDir, "references", "guide.md"), "utf-8")).toBe("Guide content");
     } finally {
       rmSync(pluginRoot, { recursive: true, force: true });
       rmSync(destSkillDir, { recursive: true, force: true });

