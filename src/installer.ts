@@ -33,7 +33,7 @@ import { execFileSync } from "node:child_process";
 import { status, statusDone, statusSimple, stopSpinner } from "./progress.js";
 import { bold, cyan, gray, yellow } from "./colors.js";
 import { validateManifest } from "./validator.js";
-import { validateGitUrl, resolveSubPathUnder } from "./sanitize.js";
+import { validateGitUrl, resolveSubPathUnder, assertPathWithinRoot } from "./sanitize.js";
 import { tmpdir } from "node:os";
 import {
   readFileSync,
@@ -46,6 +46,7 @@ import {
   readdirSync,
   copyFileSync,
   statSync,
+  realpathSync,
 } from "node:fs";
 import { join, dirname } from "node:path";
 import { fetch } from "undici";
@@ -60,16 +61,30 @@ function ensureDir(path: string): void {
 }
 
 /**
- * Recursively copy a directory from source to destination.
+ * Recursively copy a directory from `src` to `dest`, refusing to read anything
+ * that resolves outside `root`.
+ *
+ * Plugin trees are remote input: a symlink or junction inside `skills/<name>/`
+ * would otherwise make install read any file the user can read (and Pi will
+ * happily load whatever lands in `~/.agents/skills/`).
  */
-function copyDir(src: string, dest: string): void {
-  mkdirSync(dest, { recursive: true });
+export function copyDir(src: string, dest: string, root = src): void {
+  const realRoot = realpathSync(root);
+  assertPathWithinRoot(realRoot, src);
+
+  // Validate the whole level before touching the destination, so a plugin that
+  // hides an escaping link cannot leave a half-installed skill behind.
   const entries = readdirSync(src, { withFileTypes: true });
+  for (const entry of entries) {
+    assertPathWithinRoot(realRoot, join(src, entry.name));
+  }
+
+  mkdirSync(dest, { recursive: true });
   for (const entry of entries) {
     const srcPath = join(src, entry.name);
     const destPath = join(dest, entry.name);
     if (entry.isDirectory()) {
-      copyDir(srcPath, destPath);
+      copyDir(srcPath, destPath, realRoot);
     } else {
       copyFileSync(srcPath, destPath);
     }
@@ -790,10 +805,11 @@ async function copySkill(
 
   mkdirSync(destDir, { recursive: true });
 
-  // Copy entire skill directory, not just SKILL.md
+  // Copy entire skill directory, not just SKILL.md. The plugin root is passed so
+  // that a link escaping the cloned repository is refused rather than installed.
   const sourceDir = dirname(join(pluginRoot, skill.skillMdPath));
   try {
-    copyDir(sourceDir, destDir);
+    copyDir(sourceDir, destDir, pluginRoot);
   } catch (err) {
     // Do not leave a partially copied skill behind.
     rmSync(destDir, { recursive: true, force: true });
@@ -820,6 +836,7 @@ async function copyAgent(
   mkdirSync(agentsDir, { recursive: true });
 
   const sourcePath = join(pluginRoot, agent.agentMdPath);
+  assertPathWithinRoot(pluginRoot, sourcePath);
   const content = readFileSync(sourcePath, "utf-8");
   writeFileSync(destPath, content, "utf-8");
 }
