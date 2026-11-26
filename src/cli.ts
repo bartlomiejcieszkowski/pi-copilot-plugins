@@ -16,7 +16,24 @@ try {
   // Use default if package.json can't be read
 }
 
-import { cmdInstall, cmdUninstall, cmdReinstall, cmdList, cmdUpdate, cmdEnable, cmdDisable, cmdMarketplaceAdd, cmdMarketplaceList, cmdMarketplaceBrowse, cmdMarketplaceRefresh, cmdMarketplaceRemove, cmdSearch, cmdPeek, cmdValidate, parseSpec } from "./commands.js";
+import {
+  cmdInstall,
+  cmdUninstall,
+  cmdReinstall,
+  cmdList,
+  cmdUpdate,
+  cmdEnable,
+  cmdDisable,
+  cmdMarketplaceAdd,
+  cmdMarketplaceList,
+  cmdMarketplaceBrowse,
+  cmdMarketplaceRefresh,
+  cmdMarketplaceRemove,
+  cmdSearch,
+  cmdPeek,
+  cmdValidate,
+  parseSpec,
+} from "./commands.js";
 import { bold, cyan, gray, red } from "./colors.js";
 import { formatError } from "./errors.js";
 
@@ -24,7 +41,7 @@ function printUsage(): void {
   console.log(`
 ${bold(`pi-copilot-plugins v${VERSION}`)}
 
-${bold("DESCRIPTION:"  )}
+${bold("DESCRIPTION:")}
   Manage GitHub Copilot plugins in Pi.
 
 ${bold("USAGE:")}
@@ -67,7 +84,7 @@ ${bold("ENVIRONMENT:")}
   ${cyan("GITHUB_TOKEN")} or ${cyan("GH_TOKEN")}    GitHub personal access token for higher API rate limits
                       (5,000/hr vs 60/hr unauthenticated)
 
-${bold("SPEC FORMATS (for install):"  )}
+${bold("SPEC FORMATS (for install):")}
   ${cyan("name@marketplace")}    Plugin from a registered marketplace
   ${cyan("owner/repo")}          GitHub repository root
   ${cyan("owner/repo:path")}     Subdirectory in a repository
@@ -97,7 +114,7 @@ async function main(): Promise<void> {
   try {
     switch (command) {
       case "peek": {
-        const nonFlagArgs = args.slice(1).filter(a => !a.startsWith("--"));
+        const nonFlagArgs = args.slice(1).filter((a) => !a.startsWith("--"));
         const jsonFlag = args.includes("--json");
         if (nonFlagArgs.length < 1) {
           console.log(`
@@ -167,8 +184,10 @@ EXAMPLES:
         const verbose = args.includes("--verbose") || args.includes("-V");
         const dryRun = args.includes("--dry-run");
         const yes = args.includes("--yes") || args.includes("-y");
-        const outputDir = args.find((a) => a.startsWith("--output-dir="))?.split("=")[1] ||
-                          args.find((a) => a === "--output-dir") ? args[args.indexOf("--output-dir") + 1] : undefined;
+        const outputDir =
+          args.find((a) => a.startsWith("--output-dir="))?.split("=")[1] || args.find((a) => a === "--output-dir")
+            ? args[args.indexOf("--output-dir") + 1]
+            : undefined;
         const backup = args.includes("--backup");
         await cmdInstall(args[1], local, verbose, dryRun, yes, outputDir, backup);
         break;
@@ -202,8 +221,10 @@ EXAMPLES:
         const verbose = args.includes("--verbose") || args.includes("-V");
         const dryRun = args.includes("--dry-run");
         const yes = args.includes("--yes") || args.includes("-y");
-        const outputDir = args.find((a) => a.startsWith("--output-dir="))?.split("=")[1] ||
-                          args.find((a) => a === "--output-dir") ? args[args.indexOf("--output-dir") + 1] : undefined;
+        const outputDir =
+          args.find((a) => a.startsWith("--output-dir="))?.split("=")[1] || args.find((a) => a === "--output-dir")
+            ? args[args.indexOf("--output-dir") + 1]
+            : undefined;
         const backup = args.includes("--backup");
         const result = cmdUninstall(args[1], local, verbose, dryRun, yes, outputDir, backup);
         process.exit(result.success ? 0 : 1);
@@ -235,8 +256,10 @@ EXAMPLES:
         const verbose = args.includes("--verbose") || args.includes("-V");
         const dryRun = args.includes("--dry-run");
         const yes = args.includes("--yes") || args.includes("-y");
-        const outputDir = args.find((a) => a.startsWith("--output-dir="))?.split("=")[1] ||
-                          args.find((a) => a === "--output-dir") ? args[args.indexOf("--output-dir") + 1] : undefined;
+        const outputDir =
+          args.find((a) => a.startsWith("--output-dir="))?.split("=")[1] || args.find((a) => a === "--output-dir")
+            ? args[args.indexOf("--output-dir") + 1]
+            : undefined;
         const backup = args.includes("--backup");
         const result = await cmdReinstall(args[1], local, verbose, dryRun, yes, outputDir, backup);
         process.exit(result.success ? 0 : 1);

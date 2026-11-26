@@ -17,17 +17,8 @@ import {
   AGENTS_SKILLS_DIR,
   getGitHubToken,
 } from "./types.js";
-import {
-  extractPluginComponents,
-  convertMcpServers,
-} from "./converter.js";
-import {
-  installPlugin,
-  readRegistry,
-  writeRegistry,
-  getServerOwner,
-  uninstallPlugin,
-} from "./registry.js";
+import { extractPluginComponents, convertMcpServers } from "./converter.js";
+import { installPlugin, readRegistry, writeRegistry, getServerOwner, uninstallPlugin } from "./registry.js";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { status, statusDone, statusSimple, stopSpinner } from "./progress.js";
@@ -134,9 +125,7 @@ export async function peekManifestResult(spec: PluginSpec): Promise<PeekManifest
       if (token) headers["Authorization"] = `token ${token}`;
 
       // Agent Plugins and legacy manifests live at different locations inside the plugin directory
-      const manifestPaths = normalizedSubPath
-        ? MANIFEST_PATHS.map((p) => `${normalizedSubPath}/${p}`)
-        : MANIFEST_PATHS;
+      const manifestPaths = normalizedSubPath ? MANIFEST_PATHS.map((p) => `${normalizedSubPath}/${p}`) : MANIFEST_PATHS;
 
       const checked: string[] = [];
       let invalidError: string | undefined;
@@ -156,7 +145,7 @@ export async function peekManifestResult(spec: PluginSpec): Promise<PeekManifest
           continue;
         }
 
-        const data = await response.json() as { content: string };
+        const data = (await response.json()) as { content: string };
         const decoded = Buffer.from(data.content, "base64").toString("utf-8");
         try {
           const manifest = JSON.parse(decoded) as PluginManifest;
@@ -186,7 +175,7 @@ export async function peekManifestResult(spec: PluginSpec): Promise<PeekManifest
         const response = await fetch(legacyUrl, { headers });
 
         if (response.ok) {
-          const data = await response.json() as { content: string };
+          const data = (await response.json()) as { content: string };
           const decoded = Buffer.from(data.content, "base64").toString("utf-8");
           try {
             const config = JSON.parse(decoded);
@@ -208,7 +197,10 @@ export async function peekManifestResult(spec: PluginSpec): Promise<PeekManifest
     if (spec.source.type === "git") {
       // For git URLs, try to get the archive and extract manifest
       // This is more complex and may not be worth implementing for now
-      return { manifest: null, error: "Peeking at git URLs is not supported. Install the plugin to inspect its manifest." };
+      return {
+        manifest: null,
+        error: "Peeking at git URLs is not supported. Install the plugin to inspect its manifest.",
+      };
     }
 
     if (spec.source.type === "local") {
@@ -234,9 +226,7 @@ function createLegacyManifestFromContent(
   _subPath: string | undefined,
   config: Record<string, unknown>
 ): PluginManifest {
-  const skills = "skills" in config && Array.isArray(config.skills)
-    ? config.skills as string[]
-    : ["skills"];
+  const skills = "skills" in config && Array.isArray(config.skills) ? (config.skills as string[]) : ["skills"];
   return {
     $schema: "https://copilot-plugins.dev/schemas/legacy/v0.json",
     name: (config.name as string) || repo.split("/").pop() || "unknown",
@@ -304,11 +294,7 @@ export async function downloadPlugin(
 /**
  * Git clone a repository to the cache directory.
  */
-async function gitClone(
-  url: string,
-  pluginName: string,
-  subPath?: string
-): Promise<{ cacheDir: string; sha: string }> {
+async function gitClone(url: string, pluginName: string, subPath?: string): Promise<{ cacheDir: string; sha: string }> {
   // Reject urls and sub paths that could execute something or escape the cache
   // before any network or filesystem work happens.
   const safeUrl = validateGitUrl(url);
@@ -340,10 +326,18 @@ async function gitClone(
     execFileSync(
       "git",
       [
-        "-c", "protocol.ext.allow=never",
-        "-c", "protocol.file.allow=never",
-        "-c", "credential.helper=",
-        "clone", "--depth", "1", "--", safeUrl, cacheDir,
+        "-c",
+        "protocol.ext.allow=never",
+        "-c",
+        "protocol.file.allow=never",
+        "-c",
+        "credential.helper=",
+        "clone",
+        "--depth",
+        "1",
+        "--",
+        safeUrl,
+        cacheDir,
       ],
       {
         stdio: "pipe",
@@ -394,15 +388,18 @@ export async function peekSkills(spec: PluginSpec): Promise<string[]> {
 
       // Try subPath-based skills directory first, then fall back to repo root
       const urls = subPath
-        ? [`https://api.github.com/repos/${repo}/contents/${subPath}/skills`, `https://api.github.com/repos/${repo}/contents/skills`]
+        ? [
+            `https://api.github.com/repos/${repo}/contents/${subPath}/skills`,
+            `https://api.github.com/repos/${repo}/contents/skills`,
+          ]
         : [`https://api.github.com/repos/${repo}/contents/skills`];
 
       for (const apiUrl of urls) {
         const response = await fetch(apiUrl, { headers });
         if (response.ok) {
-          const items = await response.json() as Array<{ name: string; type: string }>;
+          const items = (await response.json()) as Array<{ name: string; type: string }>;
           // Filter to directories (we'll check for SKILL.md later)
-          return items.filter(i => i.type === "dir").map(i => i.name);
+          return items.filter((i) => i.type === "dir").map((i) => i.name);
         }
       }
       return [];
@@ -457,20 +454,12 @@ export function readManifest(pluginRoot: string, subPath?: string): PluginManife
 
       // If it has mcpServers, treat as legacy MCP config
       if ("mcpServers" in parsed) {
-        return createLegacyManifestFromContent(
-          subPath?.split("/").pop() || "unknown",
-          subPath,
-          parsed
-        );
+        return createLegacyManifestFromContent(subPath?.split("/").pop() || "unknown", subPath, parsed);
       }
 
       // If it has skills, agents, or lspServers, treat as legacy manifest
       if ("skills" in parsed || "agents" in parsed || "lspServers" in parsed) {
-        return createLegacyManifestFromContent(
-          parsed.name || "unknown",
-          subPath,
-          parsed
-        );
+        return createLegacyManifestFromContent(parsed.name || "unknown", subPath, parsed);
       }
     } catch {
       // Try next candidate
@@ -479,7 +468,7 @@ export function readManifest(pluginRoot: string, subPath?: string): PluginManife
 
   throw new Error(
     `Failed to read plugin.json from ${pluginRoot}: no manifest found in any expected location\n` +
-    `Checked: ${candidates.join(", ")}`
+      `Checked: ${candidates.join(", ")}`
   );
 }
 
@@ -521,7 +510,7 @@ export async function installPluginPackage(
       }
 
       if (!found) {
-        const available = marketplaces.map(m => m.name).join(", ");
+        const available = marketplaces.map((m) => m.name).join(", ");
         throw new Error(
           `Plugin "${spec.name}" not found in any marketplace (${available}). Use "pi-copilot-plugins marketplace browse <name>" to see available plugins.`
         );
@@ -727,15 +716,7 @@ export async function reinstallPluginPackage(
 
     // Now reinstall from scratch
     const pluginSpec: PluginSpec = { name, source: plugin.source };
-    const reinstallResult = await installPluginPackage(
-      pluginSpec,
-      local,
-      verbose,
-      dryRun,
-      yes,
-      outputDir,
-      backup
-    );
+    const reinstallResult = await installPluginPackage(pluginSpec, local, verbose, dryRun, yes, outputDir, backup);
 
     return reinstallResult;
   } catch (err: any) {
@@ -860,7 +841,15 @@ async function copyAgent(
 /**
  * Uninstall a plugin: remove from registry, mcp.json, skills, agents, and cache.
  */
-export function uninstallPluginPackage(name: string, local = false, verbose = false, dryRun = false, yes = false, outputDir?: string, backup = false): UninstallResult {
+export function uninstallPluginPackage(
+  name: string,
+  local = false,
+  verbose = false,
+  dryRun = false,
+  yes = false,
+  outputDir?: string,
+  backup = false
+): UninstallResult {
   const result: UninstallResult = {
     success: false,
     pluginName: name,
@@ -1060,7 +1049,9 @@ export async function updatePluginPackage(
     const components = extractPluginComponents(downloadResult.manifest, downloadResult.cacheDir);
 
     if (verbose) {
-      console.log(`  Extracted ${components.mcpServers.length} MCP server(s), ${components.skills.length} skill(s), ${components.agents.length} agent(s)`);
+      console.log(
+        `  Extracted ${components.mcpServers.length} MCP server(s), ${components.skills.length} skill(s), ${components.agents.length} agent(s)`
+      );
     }
 
     // Merge MCP servers into mcp.json
@@ -1078,7 +1069,7 @@ export async function updatePluginPackage(
 
     // Convert and merge MCP servers
     const converted = convertMcpServers({ mcpServers: components.mcpServers });
-    
+
     for (const [serverName, piServer] of Object.entries(converted)) {
       if (verbose) {
         console.log(`  Adding MCP server: ${serverName} (${piServer.type || "stdio"})`);
@@ -1143,7 +1134,10 @@ export async function updatePluginPackage(
     }
 
     // Update registry entry with new version/SHA
-    const manifestVersion = "version" in downloadResult.manifest && downloadResult.manifest.version ? downloadResult.manifest.version : undefined;
+    const manifestVersion =
+      "version" in downloadResult.manifest && downloadResult.manifest.version
+        ? downloadResult.manifest.version
+        : undefined;
     if (!dryRun) {
       registry.plugins[name] = {
         ...plugin,
@@ -1152,8 +1146,8 @@ export async function updatePluginPackage(
         lastVersion: plugin.version, // Save current version as lastVersion for release notes
         components: {
           mcpServers: Object.keys(components.mcpServers),
-          skills: components.skills.map(s => s.name),
-          agents: components.agents.map(a => a.name),
+          skills: components.skills.map((s) => s.name),
+          agents: components.agents.map((a) => a.name),
         },
         cacheDir: downloadResult.cacheDir,
         installedAt: plugin.installedAt,
@@ -1166,8 +1160,12 @@ export async function updatePluginPackage(
     if (!dryRun && manifestVersion && plugin.version && manifestVersion !== plugin.version) {
       console.log(`
   ${bold("Release Notes")}:`);
-      console.log(`  ${cyan("Previous version")}: ${plugin.version}${plugin.sha ? ` (${plugin.sha.slice(0, 8)})` : ""}`);
-      console.log(`  ${cyan("New version")}: ${manifestVersion}${downloadResult.sha ? ` (${downloadResult.sha.slice(0, 8)})` : ""}`);
+      console.log(
+        `  ${cyan("Previous version")}: ${plugin.version}${plugin.sha ? ` (${plugin.sha.slice(0, 8)})` : ""}`
+      );
+      console.log(
+        `  ${cyan("New version")}: ${manifestVersion}${downloadResult.sha ? ` (${downloadResult.sha.slice(0, 8)})` : ""}`
+      );
       if (plugin.version && manifestVersion) {
         console.log(`  ${gray("Change")}: ${plugin.version} → ${manifestVersion}`);
       }

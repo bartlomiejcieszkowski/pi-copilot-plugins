@@ -180,9 +180,7 @@ export function listPlugins(filter?: { enabled?: boolean }): InstalledPluginInfo
   const plugins = Object.values(registry.plugins);
 
   if (filter?.enabled !== undefined) {
-    return plugins
-      .filter((p) => p.enabled === filter.enabled)
-      .map(toInstalledInfo);
+    return plugins.filter((p) => p.enabled === filter.enabled).map(toInstalledInfo);
   }
 
   return plugins.map(toInstalledInfo);
@@ -191,10 +189,7 @@ export function listPlugins(filter?: { enabled?: boolean }): InstalledPluginInfo
 /**
  * Register a marketplace.
  */
-export function registerMarketplace(
-  name: string,
-  source: string
-): RegistryMarketplace {
+export function registerMarketplace(name: string, source: string): RegistryMarketplace {
   const registry = readRegistry();
 
   registry.marketplaces[name] = { source };
