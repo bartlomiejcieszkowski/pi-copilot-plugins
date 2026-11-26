@@ -6,10 +6,7 @@ import { join } from "node:path";
  * Create a timestamped backup of a file or directory.
  * Returns the backup path, or null if backup was skipped.
  */
-export function createBackup(
-  sourcePath: string,
-  backupBase?: string
-): string | null {
+export function createBackup(sourcePath: string, backupBase?: string): string | null {
   if (!existsSync(sourcePath)) {
     return null;
   }

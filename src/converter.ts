@@ -19,9 +19,7 @@ import { join } from "node:path";
  * Convert a Copilot MCP config to Pi's format.
  * Returns a map of server name → PiMcpServer.
  */
-export function convertMcpServers(
-  copilotConfig: CopilotMcpConfig,
-): Record<string, PiMcpServer> {
+export function convertMcpServers(copilotConfig: CopilotMcpConfig): Record<string, PiMcpServer> {
   const result: Record<string, PiMcpServer> = {};
 
   for (const [name, server] of Object.entries(copilotConfig.mcpServers)) {
@@ -37,10 +35,7 @@ export function convertMcpServers(
 /**
  * Convert a single Copilot MCP server to Pi's format.
  */
-function convertMcpServer(
-  name: string,
-  server: CopilotMcpServer,
-): PiMcpServer | null {
+function convertMcpServer(name: string, server: CopilotMcpServer): PiMcpServer | null {
   // Skip servers with no transport (invalid)
   if (!server.command && !server.url && !server.type) {
     return null;
@@ -110,7 +105,7 @@ export function expandPluginPlaceholders(
   input: string | string[],
   pluginName: string,
   cacheDir: string,
-  dataDir: string,
+  dataDir: string
 ): string | string[] {
   const replace = (value: string): string =>
     value
@@ -147,17 +142,15 @@ function assertComponentPath(
   pluginRoot: string,
   kind: "skill" | "agent",
   manifestName: string,
-  componentPath: string,
+  componentPath: string
 ): void {
   const relative = trimTrailingSlashes(componentPath);
-  const staysInside =
-    !relative.split("/").includes("..") &&
-    resolvesUnderPlugin(pluginRoot, relative);
+  const staysInside = !relative.split("/").includes("..") && resolvesUnderPlugin(pluginRoot, relative);
 
   if (!staysInside) {
     throw new Error(
       `Plugin "${manifestName}": ${kind} path "${componentPath}" escapes the plugin root. ` +
-        `Component paths must stay inside the plugin. Please fix the plugin manifest and reinstall.`,
+        `Component paths must stay inside the plugin. Please fix the plugin manifest and reinstall.`
     );
   }
 }
@@ -178,10 +171,7 @@ function resolvesUnderPlugin(pluginRoot: string, relative: string): boolean {
  * For Agent Plugins 1.0: skills/ subdirectories with SKILL.md
  * For Legacy: skills/ or configured skills paths from plugin.json
  */
-export function extractSkills(
-  manifest: PluginManifest,
-  pluginRoot: string,
-): SkillEntry[] {
+export function extractSkills(manifest: PluginManifest, pluginRoot: string): SkillEntry[] {
   const skills: SkillEntry[] = [];
 
   let skillPaths: string[] = [];
@@ -205,7 +195,7 @@ export function extractSkills(
       throw new Error(
         `Plugin "${manifest.name}": skill path "${skillPath}" uses backslashes. ` +
           `The Agent Plugins spec requires forward slashes (e.g. "skills/"). ` +
-          `Please fix the plugin manifest and reinstall.`,
+          `Please fix the plugin manifest and reinstall.`
       );
     }
     assertComponentPath(pluginRoot, "skill", manifest.name, skillPath);
@@ -222,7 +212,7 @@ export function extractSkills(
       if (name === "." || name === "..") {
         throw new Error(
           `Plugin "${manifest.name}": skill path "${skillPath}" escapes the plugin root. ` +
-            `Component paths must stay inside the plugin. Please fix the plugin manifest and reinstall.`,
+            `Component paths must stay inside the plugin. Please fix the plugin manifest and reinstall.`
         );
       }
       if (name) {
@@ -254,10 +244,7 @@ export function extractSkills(
  * For Agent Plugins 1.0: com.github.copilot/agents/
  * For Legacy: agents/ or configured agents paths from plugin.json
  */
-export function extractAgents(
-  manifest: PluginManifest,
-  pluginRoot: string,
-): AgentEntry[] {
+export function extractAgents(manifest: PluginManifest, pluginRoot: string): AgentEntry[] {
   const agents: AgentEntry[] = [];
 
   let agentPaths: string[] = [];
@@ -281,7 +268,7 @@ export function extractAgents(
       throw new Error(
         `Plugin "${manifest.name}": agent path "${agentPath}" uses backslashes. ` +
           `The Agent Plugins spec requires forward slashes (e.g. "agents/"). ` +
-          `Please fix the plugin manifest and reinstall.`,
+          `Please fix the plugin manifest and reinstall.`
       );
     }
     assertComponentPath(pluginRoot, "agent", manifest.name, agentPath);
@@ -343,10 +330,7 @@ function listDirectory(dir: string): string[] {
  * Agent Plugins 1.0: root mcp.json
  * Legacy: .mcp.json, .github/mcp.json, or mcpServers field in plugin.json
  */
-export function extractMcpConfig(
-  manifest: PluginManifest,
-  pluginRoot: string,
-): CopilotMcpConfig | null {
+export function extractMcpConfig(manifest: PluginManifest, pluginRoot: string): CopilotMcpConfig | null {
   if (isAgentPlugins(manifest)) {
     // Agent Plugins 1.0: read from root mcp.json
     return readMcpJson(`${pluginRoot}/mcp.json`);
@@ -366,11 +350,7 @@ export function extractMcpConfig(
     if (typeof mcpServers === "string") {
       return readMcpJson(`${pluginRoot}/${mcpServers}`);
     }
-    if (
-      typeof mcpServers === "object" &&
-      mcpServers !== null &&
-      !Array.isArray(mcpServers)
-    ) {
+    if (typeof mcpServers === "object" && mcpServers !== null && !Array.isArray(mcpServers)) {
       return { mcpServers: mcpServers as Record<string, CopilotMcpServer> };
     }
   }
@@ -396,10 +376,7 @@ function readMcpJson(path: string): CopilotMcpConfig | null {
 /**
  * Extract all components from a plugin directory.
  */
-export function extractPluginComponents(
-  manifest: PluginManifest,
-  pluginRoot: string,
-): ExtractedComponents {
+export function extractPluginComponents(manifest: PluginManifest, pluginRoot: string): ExtractedComponents {
   const mcpConfig = extractMcpConfig(manifest, pluginRoot);
   const mcpServers = mcpConfig ? mcpConfig.mcpServers : {};
   const skills = extractSkills(manifest, pluginRoot);

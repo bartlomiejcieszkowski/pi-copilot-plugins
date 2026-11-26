@@ -47,8 +47,7 @@ export type PluginManifest = AgentPluginsManifest | LegacyManifest;
 /** Whether a manifest is Agent Plugins 1.0 */
 export function isAgentPlugins(manifest: PluginManifest): manifest is AgentPluginsManifest {
   return (
-    "$schema" in manifest &&
-    manifest.$schema === "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json" ||
+    ("$schema" in manifest && manifest.$schema === "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json") ||
     manifest.$schema === "https://agent-plugins.org/schemas/1.1.0/plugin.schema.json"
   );
 }
@@ -190,7 +189,7 @@ export const TOOL_NAMES = [
   "copilot_plugins_marketplace_remove",
 ] as const;
 
-export type ToolName = typeof TOOL_NAMES[number];
+export type ToolName = (typeof TOOL_NAMES)[number];
 
 /**
  * Get the default tool state (all disabled).
@@ -419,7 +418,10 @@ export const PROJECT_SKILLS_DIR = join(PROJECT_AGENTS_DIR, "skills");
 export const PROJECT_AGENTS_DIR_PATH = join(PROJECT_AGENTS_DIR, "agents");
 
 /** Resolve paths based on scope (user vs project). */
-export function resolvePaths(scope: "user" | "project" = "user", outputDir?: string): {
+export function resolvePaths(
+  scope: "user" | "project" = "user",
+  outputDir?: string
+): {
   mcpJson: string;
   skillsDir: string;
   agentsDir: string;

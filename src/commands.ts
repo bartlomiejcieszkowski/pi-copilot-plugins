@@ -67,7 +67,11 @@ export function parseSpec(spec: string): PluginSpec {
   // Local path (check before GitHub to avoid ./path being parsed as GitHub)
   if (spec.startsWith("./") || spec.startsWith("/") || spec.startsWith("~")) {
     return {
-      name: spec.split("/").pop()?.replace(/\.[^/.]+$/, "") || spec,
+      name:
+        spec
+          .split("/")
+          .pop()
+          ?.replace(/\.[^/.]+$/, "") || spec,
       source: { type: "local", path: spec },
     };
   }
@@ -111,7 +115,15 @@ function extractNameFromUrl(url: string): string {
 
 // ─── Install Command ────────────────────────────────────────────────────────
 
-export async function cmdInstall(spec: string, local = false, verbose = false, dryRun = false, yes = false, outputDir?: string, backup = false): Promise<InstallResult> {
+export async function cmdInstall(
+  spec: string,
+  local = false,
+  verbose = false,
+  dryRun = false,
+  yes = false,
+  outputDir?: string,
+  backup = false
+): Promise<InstallResult> {
   const pluginSpec = parseSpec(spec);
   const scope: "user" | "project" = local ? "project" : "user";
 
@@ -169,7 +181,9 @@ export async function cmdInstall(spec: string, local = false, verbose = false, d
     if (result.agents.length > 0) {
       console.log(`  ${cyan("Agents")}: ${result.agents.join(", ")}`);
     }
-    console.log(`\n${yellow("Note: Changes to MCP servers and skills require a Pi reload to take effect. Run /reload or restart Pi to apply changes.")}`);
+    console.log(
+      `\n${yellow("Note: Changes to MCP servers and skills require a Pi reload to take effect. Run /reload or restart Pi to apply changes.")}`
+    );
   } else {
     console.error(red(`✗ Failed to install plugin "${pluginSpec.name}"`));
     if (result.errors) {
@@ -184,7 +198,15 @@ export async function cmdInstall(spec: string, local = false, verbose = false, d
 
 // ─── Uninstall Command ──────────────────────────────────────────────────────
 
-export function cmdUninstall(name: string, local = false, verbose = false, dryRun = false, yes = false, outputDir?: string, backup = false): UninstallResult {
+export function cmdUninstall(
+  name: string,
+  local = false,
+  verbose = false,
+  dryRun = false,
+  yes = false,
+  outputDir?: string,
+  backup = false
+): UninstallResult {
   if (dryRun) {
     console.log(bold("DRY RUN — no changes will be made"));
   }
@@ -212,7 +234,9 @@ export function cmdUninstall(name: string, local = false, verbose = false, dryRu
     if (result.removedAgents.length > 0) {
       console.log(`  Removed agents: ${result.removedAgents.join(", ")}`);
     }
-    console.log(`\n${yellow("Note: Changes to MCP servers and skills require a Pi reload to take effect. Run /reload or restart Pi to apply changes.")}`);
+    console.log(
+      `\n${yellow("Note: Changes to MCP servers and skills require a Pi reload to take effect. Run /reload or restart Pi to apply changes.")}`
+    );
   } else {
     console.error(`✗ Failed to uninstall plugin "${name}"`);
     if (result.errors) {
@@ -227,7 +251,15 @@ export function cmdUninstall(name: string, local = false, verbose = false, dryRu
 
 // ─── Reinstall Command ─────────────────────────────────────────────────────
 
-export async function cmdReinstall(name: string, local = false, verbose = false, dryRun = false, yes = false, outputDir?: string, backup = false): Promise<InstallResult> {
+export async function cmdReinstall(
+  name: string,
+  local = false,
+  verbose = false,
+  dryRun = false,
+  yes = false,
+  outputDir?: string,
+  backup = false
+): Promise<InstallResult> {
   if (dryRun) {
     console.log(bold("DRY RUN — no changes will be made"));
   }
@@ -484,8 +516,8 @@ export function cmdMarketplaceRemove(nameOrSource: string, force = false): void 
   // Try to find by name first, then by source
   let marketplaceName: string | undefined;
   const marketplaces = listMarketplaces();
-  const byName = marketplaces.find(mp => mp.name === nameOrSource);
-  const bySource = marketplaces.find(mp => mp.source === nameOrSource);
+  const byName = marketplaces.find((mp) => mp.name === nameOrSource);
+  const bySource = marketplaces.find((mp) => mp.source === nameOrSource);
 
   if (byName) {
     marketplaceName = byName.name;
@@ -524,7 +556,7 @@ export function cmdMarketplaceRemove(nameOrSource: string, force = false): void 
  * Extract names from an array that may be strings or objects with name property.
  */
 function extractNames(arr: unknown[]): string[] {
-  return arr.map(item => {
+  return arr.map((item) => {
     if (typeof item === "string") return item;
     if (item && typeof item === "object" && "name" in item) return (item as { name: string }).name;
     return "unknown";
@@ -660,7 +692,7 @@ export async function cmdPeek(spec: string, json = false): Promise<void> {
 
     try {
       const { plugins, pluginRoot } = await listMarketplacePlugins(mp.source);
-      const match = plugins.find(p => p.name.toLowerCase() === pluginName.toLowerCase());
+      const match = plugins.find((p) => p.name.toLowerCase() === pluginName.toLowerCase());
       if (!match) continue;
 
       // Convert to PluginSpec for peekManifest
@@ -687,12 +719,14 @@ export async function cmdPeek(spec: string, json = false): Promise<void> {
       // Peek actual skills from the skills directory
       const skills = await peekSkills(pluginSpec);
 
-      const mcpServers = "mcpServers" in peek.manifest && peek.manifest.mcpServers && typeof peek.manifest.mcpServers === "object"
-        ? Object.keys(peek.manifest.mcpServers as Record<string, unknown>)
-        : [];
-      const agents = "agents" in peek.manifest && peek.manifest.agents && Array.isArray(peek.manifest.agents)
-        ? extractNames(peek.manifest.agents)
-        : [];
+      const mcpServers =
+        "mcpServers" in peek.manifest && peek.manifest.mcpServers && typeof peek.manifest.mcpServers === "object"
+          ? Object.keys(peek.manifest.mcpServers as Record<string, unknown>)
+          : [];
+      const agents =
+        "agents" in peek.manifest && peek.manifest.agents && Array.isArray(peek.manifest.agents)
+          ? extractNames(peek.manifest.agents)
+          : [];
 
       result.mcpServers = mcpServers;
       result.skills = skills;
@@ -700,7 +734,9 @@ export async function cmdPeek(spec: string, json = false): Promise<void> {
 
       // Check for warnings
       if (!result.mcpServers?.length && !result.skills?.length && !result.agents?.length) {
-        result.warnings = ["No installable components (MCP servers, skills, or agents) found. Plugin may contain only Copilot-specific extensions."];
+        result.warnings = [
+          "No installable components (MCP servers, skills, or agents) found. Plugin may contain only Copilot-specific extensions.",
+        ];
       }
 
       results.push(result);
@@ -719,7 +755,7 @@ export async function cmdPeek(spec: string, json = false): Promise<void> {
     return;
   }
 
-  const readable = results.filter(r => !r.error);
+  const readable = results.filter((r) => !r.error);
   if (readable.length === 0) {
     for (const result of results) {
       console.error(red(`Found "${result.name}" in ${result.marketplace} but failed to read its manifest:`));
@@ -729,7 +765,7 @@ export async function cmdPeek(spec: string, json = false): Promise<void> {
   }
 
   // Check if any results have installable components
-  const hasInstallable = readable.some(r => r.mcpServers?.length || r.skills?.length || r.agents?.length);
+  const hasInstallable = readable.some((r) => r.mcpServers?.length || r.skills?.length || r.agents?.length);
   if (!hasInstallable) {
     console.log(cyan(`Found "${pluginName}" but no installable components (MCP servers, skills, or agents).`));
     console.log(`  These plugins may only contain Copilot-specific extensions, which are not supported by Pi.`);

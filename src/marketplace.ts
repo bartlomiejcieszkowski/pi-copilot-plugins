@@ -74,7 +74,10 @@ function cacheMarketplace(source: string, manifest: MarketplaceManifest): void {
  * Stale means cache is older than 24h — still returned but user is warned.
  * @param force - If true, bypass cache and always fetch from network.
  */
-export async function fetchMarketplace(source: string, force = false): Promise<{ manifest: MarketplaceManifest; stale: boolean }> {
+export async function fetchMarketplace(
+  source: string,
+  force = false
+): Promise<{ manifest: MarketplaceManifest; stale: boolean }> {
   // Check cache first (unless forced)
   if (!force) {
     const cached = getCachedMarketplace(source);
@@ -126,7 +129,10 @@ export async function fetchMarketplace(source: string, force = false): Promise<{
  * List plugins from a marketplace.
  * @param force - If true, bypass cache and always fetch from network.
  */
-export async function listMarketplacePlugins(source: string, force = false): Promise<{ plugins: MarketplacePlugin[]; pluginRoot?: string; stale: boolean }> {
+export async function listMarketplacePlugins(
+  source: string,
+  force = false
+): Promise<{ plugins: MarketplacePlugin[]; pluginRoot?: string; stale: boolean }> {
   const { manifest, stale } = await fetchMarketplace(source, force);
   return { plugins: manifest.plugins, pluginRoot: manifest.metadata?.pluginRoot, stale };
 }
@@ -254,7 +260,14 @@ export function marketplacePluginToSpec(
       source = { type: "github", repo: marketplaceSource, path: resolvePluginPath(rawSource, pluginRoot) };
     }
   } else if (typeof plugin.source === "object" && plugin.source && "source" in plugin.source) {
-    const ms = plugin.source as { source: string; repo?: string; url?: string; path?: string; ref?: string; sha?: string };
+    const ms = plugin.source as {
+      source: string;
+      repo?: string;
+      url?: string;
+      path?: string;
+      ref?: string;
+      sha?: string;
+    };
     if (ms.source === "github" && ms.repo) {
       if (!isSafeRepoSlug(ms.repo)) {
         throw new Error(`Unsafe marketplace repo reference: expected "owner/repo" ("${ms.repo}")`);

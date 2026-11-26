@@ -17,50 +17,35 @@ export function validateManifest(manifest: Record<string, unknown>): boolean {
 
   // §5.3 Required fields (name is required; $schema is guaranteed 1.0.0 by now)
   if (!("name" in manifest)) {
-    console.warn(
-      yellow(bold("⚠ Warning:")) + " Missing required field 'name'."
-    );
-    
+    console.warn(yellow(bold("⚠ Warning:")) + " Missing required field 'name'.");
   } else if (typeof manifest["name"] !== "string") {
-    console.warn(
-      yellow(bold("⚠ Warning:")) + " 'name' must be a string."
-    );
-    
+    console.warn(yellow(bold("⚠ Warning:")) + " 'name' must be a string.");
   } else {
     const name = manifest["name"] as string;
     // §5.5 Name constraints
     if (name.length < 1 || name.length > 64) {
-      console.warn(
-        yellow(bold("⚠ Warning:")) + ` Plugin name "${name}" must be 1-64 characters (got ${name.length}).`
-      );
-      
+      console.warn(yellow(bold("⚠ Warning:")) + ` Plugin name "${name}" must be 1-64 characters (got ${name.length}).`);
     }
     if (!/^[a-z0-9][a-z0-9.\-]*[a-z0-9]$|^[a-z0-9]$/.test(name)) {
       console.warn(
-        yellow(bold("⚠ Warning:")) + ` Plugin name "${name}" must be lowercase alphanumeric, hyphens, and periods, starting and ending with alphanumeric.`
+        yellow(bold("⚠ Warning:")) +
+          ` Plugin name "${name}" must be lowercase alphanumeric, hyphens, and periods, starting and ending with alphanumeric.`
       );
-      
     }
     if (/--|\.\./.test(name)) {
       console.warn(
-        yellow(bold("⚠ Warning:")) + ` Plugin name "${name}" must not contain consecutive hyphens (--) or consecutive periods (..).`
+        yellow(bold("⚠ Warning:")) +
+          ` Plugin name "${name}" must not contain consecutive hyphens (--) or consecutive periods (..).`
       );
-      
     }
   }
 
   // §5.4 Metadata fields — type checks only
   if ("version" in manifest && typeof manifest["version"] !== "string") {
-    console.warn(
-      yellow(bold("⚠ Warning:")) + " 'version' must be a string."
-    );
-    
+    console.warn(yellow(bold("⚠ Warning:")) + " 'version' must be a string.");
   }
   if ("description" in manifest && typeof manifest["description"] !== "string") {
-    console.warn(
-      yellow(bold("⚠ Warning:")) + " 'description' must be a string."
-    );
-    
+    console.warn(yellow(bold("⚠ Warning:")) + " 'description' must be a string.");
   }
   if ("author" in manifest) {
     const author = manifest["author"];
@@ -68,57 +53,39 @@ export function validateManifest(manifest: Record<string, unknown>): boolean {
       console.warn(
         yellow(bold("⚠ Warning:")) + " 'author' must be an object with optional name, email, and url string fields."
       );
-      
     } else {
       for (const key of Object.keys(author as Record<string, unknown>)) {
         if (!["name", "email", "url"].includes(key)) {
-          console.warn(
-            yellow(bold("⚠ Warning:")) + ` 'author' contains unknown field '${key}'.`
-          );
+          console.warn(yellow(bold("⚠ Warning:")) + ` 'author' contains unknown field '${key}'.`);
         }
       }
       for (const key of ["name", "email", "url"]) {
-        if (key in (author as Record<string, unknown>) && typeof (author as Record<string, unknown>)[key] !== "string") {
-          console.warn(
-            yellow(bold("⚠ Warning:")) + ` 'author.${key}' must be a string.`
-          );
-          
+        if (
+          key in (author as Record<string, unknown>) &&
+          typeof (author as Record<string, unknown>)[key] !== "string"
+        ) {
+          console.warn(yellow(bold("⚠ Warning:")) + ` 'author.${key}' must be a string.`);
         }
       }
     }
   }
   if ("homepage" in manifest && typeof manifest["homepage"] !== "string") {
-    console.warn(
-      yellow(bold("⚠ Warning:")) + " 'homepage' must be a string."
-    );
-    
+    console.warn(yellow(bold("⚠ Warning:")) + " 'homepage' must be a string.");
   }
   if ("repository" in manifest && typeof manifest["repository"] !== "string") {
-    console.warn(
-      yellow(bold("⚠ Warning:")) + " 'repository' must be a string."
-    );
-    
+    console.warn(yellow(bold("⚠ Warning:")) + " 'repository' must be a string.");
   }
   if ("license" in manifest && typeof manifest["license"] !== "string") {
-    console.warn(
-      yellow(bold("⚠ Warning:")) + " 'license' must be a string."
-    );
-    
+    console.warn(yellow(bold("⚠ Warning:")) + " 'license' must be a string.");
   }
   if ("keywords" in manifest) {
     const keywords = manifest["keywords"];
     if (!Array.isArray(keywords)) {
-      console.warn(
-        yellow(bold("⚠ Warning:")) + " 'keywords' must be an array of strings."
-      );
-      
+      console.warn(yellow(bold("⚠ Warning:")) + " 'keywords' must be an array of strings.");
     } else {
       for (let i = 0; i < keywords.length; i++) {
         if (typeof keywords[i] !== "string") {
-          console.warn(
-            yellow(bold("⚠ Warning:")) + ` 'keywords[${i}]' must be a string.`
-          );
-          
+          console.warn(yellow(bold("⚠ Warning:")) + ` 'keywords[${i}]' must be a string.`);
         }
       }
     }
@@ -128,29 +95,34 @@ export function validateManifest(manifest: Record<string, unknown>): boolean {
   if ("extensions" in manifest) {
     const extensions = manifest["extensions"];
     if (typeof extensions !== "object" || extensions === null || Array.isArray(extensions)) {
-      console.warn(
-        yellow(bold("⚠ Warning:")) + " 'extensions' must be an object. Ignoring."
-      );
+      console.warn(yellow(bold("⚠ Warning:")) + " 'extensions' must be an object. Ignoring.");
       // Non-object extensions: report and ignore, continue loading (non-fatal)
       delete manifest["extensions"];
     } else {
       for (const [ns, value] of Object.entries(extensions as Record<string, unknown>)) {
         if (typeof value !== "object" || value === null || Array.isArray(value)) {
-          console.warn(
-            yellow(bold("⚠ Warning:")) + ` Extension namespace '${ns}' value must be an object. Ignoring.`
-          );
+          console.warn(yellow(bold("⚠ Warning:")) + ` Extension namespace '${ns}' value must be an object. Ignoring.`);
         }
       }
     }
   }
 
   // §5.2 Unknown fields — report and ignore (non-fatal)
-  const allowedFields = new Set(["$schema", "name", "version", "description", "author", "homepage", "repository", "license", "keywords", "extensions"]);
+  const allowedFields = new Set([
+    "$schema",
+    "name",
+    "version",
+    "description",
+    "author",
+    "homepage",
+    "repository",
+    "license",
+    "keywords",
+    "extensions",
+  ]);
   for (const key of Object.keys(manifest)) {
     if (!allowedFields.has(key)) {
-      console.warn(
-        yellow(bold("⚠ Warning:")) + ` Unknown field '${key}'. Ignoring per Agent Plugins 1.0.0 §5.2.`
-      );
+      console.warn(yellow(bold("⚠ Warning:")) + ` Unknown field '${key}'. Ignoring per Agent Plugins 1.0.0 §5.2.`);
     }
   }
 
