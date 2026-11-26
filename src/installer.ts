@@ -333,9 +333,23 @@ async function gitClone(
     if (existsSync(cacheDir)) {
       rmSync(cacheDir, { recursive: true, force: true });
     }
-    execFileSync("git", ["clone", "--depth", "1", "--", safeUrl, cacheDir], {
-      stdio: "pipe",
-    });
+    // Pin the transports a repository url can select, so a url that slipped past
+    // validation still cannot ask git to run something for us. `credential.helper=`
+    // (empty) unsets any inherited helper, and GIT_PROTOCOL_FROM_USER=0 stops a
+    // user-level `url.<base>.insteadOf` rewrite from re-pointing the clone.
+    execFileSync(
+      "git",
+      [
+        "-c", "protocol.ext.allow=never",
+        "-c", "protocol.file.allow=never",
+        "-c", "credential.helper=",
+        "clone", "--depth", "1", "--", safeUrl, cacheDir,
+      ],
+      {
+        stdio: "pipe",
+        env: { ...process.env, GIT_PROTOCOL_FROM_USER: "0", GIT_TERMINAL_PROMPT: "0" },
+      }
+    );
     stop();
   } catch (err: any) {
     stopSpinner();
