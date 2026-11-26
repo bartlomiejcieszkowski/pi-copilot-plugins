@@ -162,14 +162,31 @@ export function extractSkills(
         `Please fix the plugin manifest and reinstall.`
       );
     }
-    const fullSkillPath = `${pluginRoot}/${skillPath}`;
+    const normalizedSkillPath = skillPath.replace(/\/+$/, "");
+    const fullSkillPath = `${pluginRoot}/${normalizedSkillPath}`;
+
+    // A configured path may point directly at a skill directory.
+    if (existsSync(`${fullSkillPath}/SKILL.md`)) {
+      const name = normalizedSkillPath
+        .split("/")
+        .filter((part) => part && part !== ".")
+        .pop();
+      if (name) {
+        skills.push({
+          name,
+          skillMdPath: `${normalizedSkillPath}/SKILL.md`,
+        });
+      }
+      continue;
+    }
+
     const entries = listDirectory(fullSkillPath);
     for (const entry of entries) {
       const skillMd = `${fullSkillPath}/${entry}/SKILL.md`;
       if (existsSync(skillMd)) {
         skills.push({
           name: entry,
-          skillMdPath: `${skillPath}/${entry}/SKILL.md`,
+          skillMdPath: `${normalizedSkillPath}/${entry}/SKILL.md`,
         });
       }
     }

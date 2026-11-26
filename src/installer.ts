@@ -791,8 +791,14 @@ async function copySkill(
   mkdirSync(destDir, { recursive: true });
 
   // Copy entire skill directory, not just SKILL.md
-  const sourceDir = join(pluginRoot, skill.skillMdPath);
-  copyDir(sourceDir, destDir);
+  const sourceDir = dirname(join(pluginRoot, skill.skillMdPath));
+  try {
+    copyDir(sourceDir, destDir);
+  } catch (err) {
+    // Do not leave a partially copied skill behind.
+    rmSync(destDir, { recursive: true, force: true });
+    throw err;
+  }
 }
 
 /**

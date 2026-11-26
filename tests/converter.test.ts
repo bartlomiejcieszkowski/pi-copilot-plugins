@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "fs";
+import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from "fs";
+import { tmpdir } from "os";
 import { join } from "path";
 import {
   convertMcpServers,
@@ -61,6 +62,73 @@ describe("extractSkills path validation", () => {
     expect(() => extractSkills(manifest as any, "/tmp")).toThrow(
       /backslashes.*forward slashes/
     );
+  });
+});
+
+describe("extractSkills discovery", () => {
+  function createPlugin(skillDir: string): string {
+    const root = mkdtempSync(join(tmpdir(), "pi-skills-"));
+    mkdirSync(join(root, skillDir), { recursive: true });
+    writeFileSync(
+      join(root, skillDir, "SKILL.md"),
+      "---\nname: example-skill\ndescription: An example skill.\n---\n",
+      "utf-8"
+    );
+    return root;
+  }
+
+  it("discovers a skill when the configured path is the skill directory", () => {
+    const root = createPlugin("custom/example-skill");
+    try {
+      const skills = extractSkills(
+        { name: "test", skills: ["./custom/example-skill"] } as any,
+        root
+      );
+      expect(skills).toEqual([
+        {
+          name: "example-skill",
+          skillMdPath: "./custom/example-skill/SKILL.md",
+        },
+      ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("handles a direct skill path with a trailing slash", () => {
+    const root = createPlugin("custom/example-skill");
+    try {
+      const skills = extractSkills(
+        { name: "test", skills: ["custom/example-skill/"] } as any,
+        root
+      );
+      expect(skills).toEqual([
+        {
+          name: "example-skill",
+          skillMdPath: "custom/example-skill/SKILL.md",
+        },
+      ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("still discovers skills when the configured path is a parent directory", () => {
+    const root = createPlugin("custom/example-skill");
+    try {
+      const skills = extractSkills(
+        { name: "test", skills: ["./custom"] } as any,
+        root
+      );
+      expect(skills).toEqual([
+        {
+          name: "example-skill",
+          skillMdPath: "./custom/example-skill/SKILL.md",
+        },
+      ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
 

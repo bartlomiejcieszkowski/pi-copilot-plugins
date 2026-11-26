@@ -1,9 +1,20 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { readFileSync, mkdtempSync, mkdirSync, writeFileSync } from "fs";
+import {
+  readFileSync,
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  rmSync,
+} from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
-import { isAgentPlugins } from "../src/types.js";
-import { readManifest, peekManifestResult, downloadPlugin } from "../src/installer.js";
+import { isAgentPlugins, SKILLS_DIR, PI_AGENT_DIR } from "../src/types.js";
+import {
+  readManifest,
+  peekManifestResult,
+  downloadPlugin,
+  installPluginPackage,
+} from "../src/installer.js";
 import { fetch as undiciFetch } from "undici";
 
 vi.mock("undici", () => ({ fetch: vi.fn() }));
@@ -153,5 +164,55 @@ describe("downloadPlugin unsafe sources", () => {
     await expect(
       downloadPlugin({ name: "evil", source: { type: "github", repo: "acme/marketplace", path: "../../outside" } })
     ).rejects.toThrow(/escapes the cache directory/);
+  });
+});
+
+// ─── Skill Installation ─────────────────────────────────────────────────────
+
+describe("installPluginPackage skills", () => {
+  it("copies the complete skill directory", async () => {
+    const suffix = `${process.pid}-${Math.random().toString(36).slice(2, 8)}`;
+    const skillName = `example-skill-${suffix}`;
+    const pluginRoot = mkdtempSync(join(tmpdir(), "pi-plugin-"));
+    const sourceSkillDir = join(pluginRoot, "skills", skillName);
+
+    mkdirSync(join(sourceSkillDir, "references"), { recursive: true });
+    writeFileSync(
+      join(sourceSkillDir, "SKILL.md"),
+      "---\nname: " + skillName + "\ndescription: An example skill.\n---\n",
+      "utf-8"
+    );
+    writeFileSync(
+      join(sourceSkillDir, "references", "guide.md"),
+      "Guide content",
+      "utf-8"
+    );
+    writeFileSync(
+      join(pluginRoot, "plugin.json"),
+      JSON.stringify({ name: skillName, skills: ["skills"] }),
+      "utf-8"
+    );
+
+    const destSkillDir = join(SKILLS_DIR, skillName);
+    mkdirSync(PI_AGENT_DIR, { recursive: true });
+
+    try {
+      const result = await installPluginPackage({
+        name: skillName,
+        source: { type: "local", path: pluginRoot },
+      });
+
+      expect(result.success, JSON.stringify(result.errors)).toBe(true);
+      expect(result.skills).toEqual([skillName]);
+      expect(readFileSync(join(destSkillDir, "SKILL.md"), "utf-8")).toContain(
+        skillName
+      );
+      expect(
+        readFileSync(join(destSkillDir, "references", "guide.md"), "utf-8")
+      ).toBe("Guide content");
+    } finally {
+      rmSync(pluginRoot, { recursive: true, force: true });
+      rmSync(destSkillDir, { recursive: true, force: true });
+    }
   });
 });
