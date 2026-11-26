@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Configured skill paths that point directly at a skill directory are now discovered (#25)
 - Skill installation copies the skill directory instead of passing the `SKILL.md` file path to directory copy logic, and removes the destination if the copy fails (#26)
 
+### Security
+- Files inside a plugin that resolve outside it through a symlink or junction are no longer copied into the skills or agents directories (#28)
+
 ## [1.0.3] — 2026-11-24
 
 ### Security

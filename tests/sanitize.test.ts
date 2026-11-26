@@ -1,6 +1,13 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { join } from "path";
-import { validateGitUrl, isSafeRepoSlug, resolveSubPathUnder } from "../src/sanitize.js";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
+import {
+  validateGitUrl,
+  isSafeRepoSlug,
+  resolveSubPathUnder,
+  assertPathWithinRoot,
+} from "../src/sanitize.js";
 
 // ─── Git URL policy ─────────────────────────────────────────────────────────
 
@@ -74,5 +81,54 @@ describe("resolveSubPathUnder", () => {
 
   it("rejects an absolute sub path", () => {
     expect(() => resolveSubPathUnder(base, join(__dirname, "elsewhere"))).toThrow(/escapes the cache directory/);
+  });
+});
+
+// ─── Plugin component containment ────────────────────────
+
+describe("assertPathWithinRoot", () => {
+  let root: string;
+  let outside: string;
+
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), "pi-contain-"));
+    outside = join(root, "..", "outside-" + root.split(/[\\/]/).pop());
+    mkdirSync(join(root, "skills", "demo"), { recursive: true });
+    mkdirSync(outside, { recursive: true });
+    writeFileSync(join(outside, "secret.env"), "TOKEN=topsecret\n");
+  });
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  it("accepts a path below the root", () => {
+    const target = join(root, "skills", "demo", "SKILL.md");
+    writeFileSync(target, "# skill\n");
+
+    expect(() => assertPathWithinRoot(root, target)).not.toThrow();
+  });
+
+  it("accepts a symlink whose target stays inside the root", () => {
+    const real = join(root, "skills", "demo", "real.md");
+    const link = join(root, "skills", "demo", "link.md");
+    writeFileSync(real, "# skill\n");
+    symlinkSync(real, link, "file");
+
+    expect(() => assertPathWithinRoot(root, link)).not.toThrow();
+  });
+
+  it("rejects a file symlink resolving outside the root", () => {
+    const link = join(root, "skills", "demo", ".env");
+    symlinkSync(join(outside, "secret.env"), link, "file");
+
+    expect(() => assertPathWithinRoot(root, link)).toThrow(/outside the plugin root/);
+  });
+
+  it("rejects a directory symlink resolving outside the root", () => {
+    const link = join(root, "skills", "nested");
+    symlinkSync(outside, link, "dir");
+
+    expect(() => assertPathWithinRoot(root, link)).toThrow(/outside the plugin root/);
   });
 });

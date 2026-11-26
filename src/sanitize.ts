@@ -1,4 +1,5 @@
-import { resolve, sep } from "node:path";
+import { basename, resolve, sep } from "node:path";
+import { realpathSync } from "node:fs";
 
 /** Protocols that may be handed to `git clone` without executing anything. */
 const ALLOWED_GIT_PROTOCOLS = ["https:", "ssh:"];
@@ -42,6 +43,23 @@ export function validateGitUrl(url: string): string {
   if (!parsed.hostname) throw unsafeUrl(url, "has no host");
 
   return url;
+}
+
+/**
+ * Throw unless `target` resolves to `root` or below it, after unwinding
+ * symlinks and junctions. Plugin trees are remote input, so a path inside a
+ * cloned repository is only trusted once we know where it actually points.
+ */
+export function assertPathWithinRoot(root: string, target: string): void {
+  const realRoot = realpathSync(root);
+  const realTarget = realpathSync(target);
+
+  if (realTarget !== realRoot && !realTarget.startsWith(realRoot + sep)) {
+    throw new Error(
+      `Refusing to install plugin component "${basename(target)}": it resolves outside the plugin root` +
+        ` (${realTarget})`
+    );
+  }
 }
 
 /**
