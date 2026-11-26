@@ -40,6 +40,13 @@ describe("validateGitUrl", () => {
     expect(() => validateGitUrl("--upload-pack=/tmp/evil")).toThrow(/Unsafe git url/);
   });
 
+  it("rejects a url carrying a git config override", () => {
+    // git parses `?sshCommand=...` into the url-scoped sshCommand key, which the ssh
+    // transport then executes, so a clone url must not carry query or fragment.
+    expect(() => validateGitUrl("https://github.com/foo/bar?sshCommand=touch%20evil")).toThrow(/Unsafe git url/);
+    expect(() => validateGitUrl("https://github.com/foo/bar#allowConfigs=1")).toThrow(/Unsafe git url/);
+  });
+
   it("rejects urls without a host", () => {
     expect(() => validateGitUrl("https://")).toThrow(/Unsafe git url/);
   });

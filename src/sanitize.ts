@@ -42,6 +42,14 @@ export function validateGitUrl(url: string): string {
   }
   if (!parsed.hostname) throw unsafeUrl(url, "has no host");
 
+  // git reads configuration out of the url itself: `https://host/repo?sshCommand=...`
+  // sets the url-scoped `sshCommand` key, and the ssh transport executes whatever it
+  // names. A query or fragment turns an otherwise clean url into a command, and no
+  // legitimate clone url needs either.
+  if (parsed.search || parsed.hash) {
+    throw unsafeUrl(url, "carries a query or fragment, which git reads as configuration");
+  }
+
   return url;
 }
 

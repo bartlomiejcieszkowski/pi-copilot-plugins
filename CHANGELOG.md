@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Files inside a plugin that resolve outside it through a symlink or junction are no longer copied into the skills or agents directories (#28)
 - Configured `skills` and `agents` paths containing `..`, or pointing outside the plugin, are rejected at discovery time instead of being installed (#28)
+- Git urls carrying a query or fragment (for example `?sshCommand=...`) are rejected, because git reads them as configuration and the ssh transport executes `sshCommand` (#29)
+- `git clone` pins `protocol.ext.allow` and `protocol.file.allow` to `never`, clears `credential.helper`, and runs with `GIT_PROTOCOL_FROM_USER=0` and `GIT_TERMINAL_PROMPT=0` (#29)
 
 ## [1.0.3] — 2026-11-24
 
