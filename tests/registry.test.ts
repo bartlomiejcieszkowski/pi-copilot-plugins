@@ -134,18 +134,8 @@ describe("Registry", () => {
   });
 
   it("gets server owner", () => {
-    installPlugin(
-      "plugin-a",
-      { type: "github", repo: "a/repo" },
-      undefined,
-      ["server-x", "server-y"]
-    );
-    installPlugin(
-      "plugin-b",
-      { type: "github", repo: "b/repo" },
-      undefined,
-      ["server-z"]
-    );
+    installPlugin("plugin-a", { type: "github", repo: "a/repo" }, undefined, ["server-x", "server-y"]);
+    installPlugin("plugin-b", { type: "github", repo: "b/repo" }, undefined, ["server-z"]);
 
     expect(getServerOwner("server-x")).toBe("plugin-a");
     expect(getServerOwner("server-y")).toBe("plugin-a");

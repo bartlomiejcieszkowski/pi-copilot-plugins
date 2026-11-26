@@ -2,12 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { join } from "path";
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
-import {
-  validateGitUrl,
-  isSafeRepoSlug,
-  resolveSubPathUnder,
-  assertPathWithinRoot,
-} from "../src/sanitize.js";
+import { validateGitUrl, isSafeRepoSlug, resolveSubPathUnder, assertPathWithinRoot } from "../src/sanitize.js";
 
 // ─── Git URL policy ─────────────────────────────────────────────────────────
 

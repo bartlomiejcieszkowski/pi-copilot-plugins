@@ -1,13 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import {
-  mkdirSync,
-  writeFileSync,
-  readFileSync,
-  rmSync,
-  symlinkSync,
-  mkdtempSync,
-  existsSync,
-} from "node:fs";
+import { mkdirSync, writeFileSync, readFileSync, rmSync, symlinkSync, mkdtempSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { copyDir } from "../src/installer.js";
@@ -52,25 +44,19 @@ describe("copyDir refuses to read outside the plugin root", () => {
   it("refuses a skill file that is a symlink to a file outside the plugin", () => {
     symlinkSync(join(outside, "secret.env"), join(pluginRoot, "skills", "demo", ".env"), "file");
 
-    expect(() => copyDir(join(pluginRoot, "skills", "demo"), dest, pluginRoot)).toThrow(
-      /outside the plugin root/i
-    );
+    expect(() => copyDir(join(pluginRoot, "skills", "demo"), dest, pluginRoot)).toThrow(/outside the plugin root/i);
   });
 
   it("refuses a skill directory that is a symlink to a directory outside the plugin", () => {
     symlinkSync(outside, join(pluginRoot, "skills", "demo", "nested"), "dir");
 
-    expect(() => copyDir(join(pluginRoot, "skills", "demo"), dest, pluginRoot)).toThrow(
-      /outside the plugin root/i
-    );
+    expect(() => copyDir(join(pluginRoot, "skills", "demo"), dest, pluginRoot)).toThrow(/outside the plugin root/i);
   });
 
   it("does not leave a partially copied skill behind when it refuses", () => {
     symlinkSync(join(outside, "secret.env"), join(pluginRoot, "skills", "demo", ".env"), "file");
 
-    expect(() => copyDir(join(pluginRoot, "skills", "demo"), dest, pluginRoot)).toThrow(
-      /outside the plugin root/i
-    );
+    expect(() => copyDir(join(pluginRoot, "skills", "demo"), dest, pluginRoot)).toThrow(/outside the plugin root/i);
     // Nothing is written at all when the level is refused, so no half-installed skill.
     expect(existsSync(dest)).toBe(false);
   });

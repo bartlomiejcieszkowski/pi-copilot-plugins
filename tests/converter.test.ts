@@ -1,11 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  readFileSync,
-  mkdtempSync,
-  mkdirSync,
-  writeFileSync,
-  rmSync,
-} from "fs";
+import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import {
@@ -24,16 +18,12 @@ const FIXTURES = join(__dirname, "fixtures");
 
 describe("isAgentPlugins", () => {
   it("identifies Agent Plugins 1.0 manifest", () => {
-    const manifest = JSON.parse(
-      readFileSync(join(FIXTURES, "agent-plugins-1.0.json"), "utf-8"),
-    );
+    const manifest = JSON.parse(readFileSync(join(FIXTURES, "agent-plugins-1.0.json"), "utf-8"));
     expect(isAgentPlugins(manifest)).toBe(true);
   });
 
   it("identifies legacy manifest", () => {
-    const manifest = JSON.parse(
-      readFileSync(join(FIXTURES, "legacy-plugin.json"), "utf-8"),
-    );
+    const manifest = JSON.parse(readFileSync(join(FIXTURES, "legacy-plugin.json"), "utf-8"));
     expect(isAgentPlugins(manifest)).toBe(false);
   });
 
@@ -46,9 +36,7 @@ describe("isAgentPlugins", () => {
   });
 
   it("reads manifest with Polish characters", () => {
-    const manifest = JSON.parse(
-      readFileSync(join(FIXTURES, "polish-manifest.json"), "utf-8"),
-    );
+    const manifest = JSON.parse(readFileSync(join(FIXTURES, "polish-manifest.json"), "utf-8"));
     expect(isAgentPlugins(manifest)).toBe(true);
     expect(manifest.name).toBe("polski-test");
     expect(manifest.description).toContain("polskimi znakami");
@@ -65,9 +53,7 @@ describe("extractSkills path validation", () => {
       name: "test",
       skills: [".\\skills\\"],
     };
-    expect(() => extractSkills(manifest as any, "/tmp")).toThrow(
-      /backslashes.*forward slashes/,
-    );
+    expect(() => extractSkills(manifest as any, "/tmp")).toThrow(/backslashes.*forward slashes/);
   });
 });
 
@@ -78,7 +64,7 @@ describe("extractSkills discovery", () => {
     writeFileSync(
       join(root, skillDir, "SKILL.md"),
       "---\nname: example-skill\ndescription: An example skill.\n---\n",
-      "utf-8",
+      "utf-8"
     );
     return root;
   }
@@ -86,10 +72,7 @@ describe("extractSkills discovery", () => {
   it("discovers a skill when the configured path is the skill directory", () => {
     const root = createPlugin("custom/example-skill");
     try {
-      const skills = extractSkills(
-        { name: "test", skills: ["./custom/example-skill"] } as any,
-        root,
-      );
+      const skills = extractSkills({ name: "test", skills: ["./custom/example-skill"] } as any, root);
       expect(skills).toEqual([
         {
           name: "example-skill",
@@ -104,10 +87,7 @@ describe("extractSkills discovery", () => {
   it("handles a direct skill path with a trailing slash", () => {
     const root = createPlugin("custom/example-skill");
     try {
-      const skills = extractSkills(
-        { name: "test", skills: ["custom/example-skill/"] } as any,
-        root,
-      );
+      const skills = extractSkills({ name: "test", skills: ["custom/example-skill/"] } as any, root);
       expect(skills).toEqual([
         {
           name: "example-skill",
@@ -122,10 +102,7 @@ describe("extractSkills discovery", () => {
   it("still discovers skills when the configured path is a parent directory", () => {
     const root = createPlugin("custom/example-skill");
     try {
-      const skills = extractSkills(
-        { name: "test", skills: ["./custom"] } as any,
-        root,
-      );
+      const skills = extractSkills({ name: "test", skills: ["./custom"] } as any, root);
       expect(skills).toEqual([
         {
           name: "example-skill",
@@ -144,9 +121,7 @@ describe("extractAgents path validation", () => {
       name: "test",
       agents: ".\\agents\\",
     };
-    expect(() => extractAgents(manifest as any, "/tmp")).toThrow(
-      /backslashes.*forward slashes/,
-    );
+    expect(() => extractAgents(manifest as any, "/tmp")).toThrow(/backslashes.*forward slashes/);
   });
 });
 
@@ -228,42 +203,22 @@ describe("convertMcpServers", () => {
 
 describe("expandPluginPlaceholders", () => {
   it("expands ${PLUGIN_ROOT}", () => {
-    const result = expandPluginPlaceholders(
-      ["${PLUGIN_ROOT}/bin/server"],
-      "test",
-      "/cache/abc123",
-      "/data/test",
-    );
+    const result = expandPluginPlaceholders(["${PLUGIN_ROOT}/bin/server"], "test", "/cache/abc123", "/data/test");
     expect(result).toEqual(["/cache/abc123/bin/server"]);
   });
 
   it("expands ${PLUGIN_DATA}", () => {
-    const result = expandPluginPlaceholders(
-      "${PLUGIN_DATA}/config.json",
-      "test",
-      "/cache/abc123",
-      "/data/test",
-    );
+    const result = expandPluginPlaceholders("${PLUGIN_DATA}/config.json", "test", "/cache/abc123", "/data/test");
     expect(result).toBe("/data/test/config.json");
   });
 
   it("expands legacy placeholder names", () => {
-    const result = expandPluginPlaceholders(
-      "${CLAUDE_PLUGIN_ROOT}${CLAUDE_PLUGIN_DATA}",
-      "test",
-      "/cache",
-      "/data",
-    );
+    const result = expandPluginPlaceholders("${CLAUDE_PLUGIN_ROOT}${CLAUDE_PLUGIN_DATA}", "test", "/cache", "/data");
     expect(result).toBe("/cache/data");
   });
 
   it("handles multiple placeholders in one string", () => {
-    const result = expandPluginPlaceholders(
-      ["${PLUGIN_ROOT}/bin", "${PLUGIN_DATA}/data"],
-      "test",
-      "/cache",
-      "/data",
-    );
+    const result = expandPluginPlaceholders(["${PLUGIN_ROOT}/bin", "${PLUGIN_DATA}/data"], "test", "/cache", "/data");
     expect(result).toEqual(["/cache/bin", "/data/data"]);
   });
 });
@@ -304,18 +259,14 @@ describe("component path containment", () => {
       version: "1.0.0",
       skills: "../outside-skill",
     };
-    expect(() => extractSkills(manifest as any, pluginRoot)).toThrow(
-      /escapes the plugin root/,
-    );
+    expect(() => extractSkills(manifest as any, pluginRoot)).toThrow(/escapes the plugin root/);
   });
 
   it("refuses a parent-directory skill path instead of naming a skill ..", () => {
     const pluginRoot = makeContainmentTree();
     writeFileSync(join(pluginRoot, "SKILL.md"), "# root\n");
     const manifest = { name: "p", version: "1.0.0", skills: "skills/.." };
-    expect(() => extractSkills(manifest as any, pluginRoot)).toThrow(
-      /escapes the plugin root/,
-    );
+    expect(() => extractSkills(manifest as any, pluginRoot)).toThrow(/escapes the plugin root/);
   });
 
   it("refuses a configured agent path that escapes the plugin root", () => {
@@ -325,9 +276,7 @@ describe("component path containment", () => {
       version: "1.0.0",
       agents: "../outside-skill",
     };
-    expect(() => extractAgents(manifest as any, pluginRoot)).toThrow(
-      /escapes the plugin root/,
-    );
+    expect(() => extractAgents(manifest as any, pluginRoot)).toThrow(/escapes the plugin root/);
   });
 
   it("still discovers skills that live inside the plugin root", () => {

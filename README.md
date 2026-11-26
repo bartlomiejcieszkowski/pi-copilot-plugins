@@ -37,6 +37,7 @@ pi install ./pi-copilot-plugins
 ```
 
 Once installed, restart Pi and use:
+
 - `/copilot-plugins` — slash command to show installed count and usage
 - Tools: `copilot_plugins_browse`, `copilot_plugins_install`, `copilot_plugins_list`, `copilot_plugins_uninstall`, `copilot_plugins_enable`, `copilot_plugins_disable`, `copilot_plugins_update`, `copilot_plugins_info`, `copilot_plugins_search`
 
@@ -99,12 +100,8 @@ my-plugin/
       "args": ["-y", "my-mcp-server"]
     }
   },
-  "skills": [
-    { "name": "my-skill", "path": "skills/my-skill/SKILL.md" }
-  ],
-  "agents": [
-    { "name": "my-agent", "path": "com.github.copilot/agents/my-agent.md" }
-  ]
+  "skills": [{ "name": "my-skill", "path": "skills/my-skill/SKILL.md" }],
+  "agents": [{ "name": "my-agent", "path": "com.github.copilot/agents/my-agent.md" }]
 }
 ```
 
@@ -178,14 +175,14 @@ When installed as a Pi extension, this package provides:
 
 ## File Locations
 
-| Purpose | Path |
-| --- | --- |
-| Plugin registry | `~/.pi/agent/pi-copilot-plugins.json` |
-| Plugin cache (downloaded source) | `~/.pi/agent/copilot-plugins-cache/<hash>/` |
-| Plugin data (runtime writable dir) | `~/.pi/agent/copilot-plugins-data/<name>/` |
-| MCP config | `~/.pi/agent/mcp.json` |
-| Skills | `~/.agents/skills/<name>/SKILL.md` |
-| Agents | `~/.agents/agents/<name>.agent.md` |
+| Purpose                            | Path                                        |
+| ---------------------------------- | ------------------------------------------- |
+| Plugin registry                    | `~/.pi/agent/pi-copilot-plugins.json`       |
+| Plugin cache (downloaded source)   | `~/.pi/agent/copilot-plugins-cache/<hash>/` |
+| Plugin data (runtime writable dir) | `~/.pi/agent/copilot-plugins-data/<name>/`  |
+| MCP config                         | `~/.pi/agent/mcp.json`                      |
+| Skills                             | `~/.agents/skills/<name>/SKILL.md`          |
+| Agents                             | `~/.agents/agents/<name>.agent.md`          |
 
 ## Security
 
@@ -274,28 +271,27 @@ pi-copilot-plugins list
 pi-copilot-plugins search "mcp server"
 ```
 
-
 ### Plugin Management
 
-| Command | Description |
-|---------|-------------|
-| `install <spec>` | Install a plugin |
-| `uninstall <name>` | Uninstall a plugin |
-| `list [--json]` | List installed plugins |
-| `update [name] [--all]` | Update a plugin or all plugins |
-| `enable <name>` | Enable a plugin |
-| `disable <name>` | Disable a plugin |
-| `search <query>` | Search for plugins in registered marketplaces |
+| Command                 | Description                                   |
+| ----------------------- | --------------------------------------------- |
+| `install <spec>`        | Install a plugin                              |
+| `uninstall <name>`      | Uninstall a plugin                            |
+| `list [--json]`         | List installed plugins                        |
+| `update [name] [--all]` | Update a plugin or all plugins                |
+| `enable <name>`         | Enable a plugin                               |
+| `disable <name>`        | Disable a plugin                              |
+| `search <query>`        | Search for plugins in registered marketplaces |
 
 ### Marketplace Management
 
-| Command | Description |
-|---------|-------------|
-| `marketplace add <spec>` | Add a marketplace |
-| `marketplace list` | List registered marketplaces |
-| `marketplace browse <name>` | Browse marketplace plugins |
-| `marketplace refresh [name]` | Refresh marketplace catalog |
-| `marketplace remove <name>` | Remove a marketplace |
+| Command                      | Description                  |
+| ---------------------------- | ---------------------------- |
+| `marketplace add <spec>`     | Add a marketplace            |
+| `marketplace list`           | List registered marketplaces |
+| `marketplace browse <name>`  | Browse marketplace plugins   |
+| `marketplace refresh [name]` | Refresh marketplace catalog  |
+| `marketplace remove <name>`  | Remove a marketplace         |
 
 ### Spec Formats
 
